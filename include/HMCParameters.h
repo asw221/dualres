@@ -47,6 +47,7 @@ namespace dualres {
     value_type path_length() const;
 
     void update(const value_type &mh_rate);
+    void reset();
     
     
   private:
@@ -256,6 +257,15 @@ void dualres::HMCParameters<RealType>::update(
     _mh_running_sum += mh_rate;
   }
   _iteration++;
+};
+
+
+
+
+template< typename RealType >
+void dualres::HMCParameters<RealType>::reset() {
+  _iteration = 0;
+  _mh_running_sum = 0;
 };
 
 

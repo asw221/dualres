@@ -2,6 +2,7 @@
 #include <algorithm>
 #include <arrayfire.h>
 #include <Eigen/Core>
+#include <iomanip>
 #include <iostream>
 #include <limits>
 #include <math.h>
@@ -10,6 +11,7 @@
 
 #include "circulant_base.h"
 #include "defines.h"
+#include "extra_math.h"
 #include "MultiResData.h"
 
 
@@ -140,13 +142,19 @@ const af::array& dualres::MultiResParameters<T>::_gradient(
   __grad = -af::dft(af::idft(mu_star) / _lambda * _positive_eigen_values / mu_star.elements());
   __real_mu_temp = af::moddims(af::real(mu_star), _lDim);
   if (_n_datasets == 1) {
-    __grad += _sigma_sq_inv[0] * (data.Y(0) - __real_mu_temp) * _binary_data_positions;
+    __grad += af::moddims(
+      _sigma_sq_inv[0] * (data.Y(0) - __real_mu_temp) * _binary_data_positions,
+      _lambda.dims()
+      );
   }
   else if (_n_datasets == 2) {
-    __grad += _sigma_sq_inv[0] * (data.Y(0) - __real_mu_temp) * _binary_data_positions +
+    __grad += af::moddims(
+      _sigma_sq_inv[0] * (data.Y(0) - __real_mu_temp) * _binary_data_positions +
       _sigma_sq_inv[1] *
       af::matmul(data.W(0), (data.Y(1) - af::matmul(data.W(0), __real_mu_temp)),
-		 af_mat_prop::AF_MAT_TRANS);
+		 af_mat_prop::AF_MAT_TRANS),
+      _lambda.dims()
+      );
   }
   else {
     throw std::logic_error("Gradient only implemented for single or dual resolution");
@@ -403,7 +411,7 @@ void dualres::MultiResParameters<T>::_initialize_mu(
 ) {
   // Temporary debug version
   // _mu = af::constant(0, _lambda.dims(), _ctype);
-  _mu = af::dft(af::sqrt(_lambda) * _positive_eigen_values *
+  _mu = af::dft(dualres::csqrt(_lambda) * _positive_eigen_values *
   		af::idft(af::randn(_lambda.dims(), _ctype, dualres::internals::_AF_RNG_)) /
   		(k * _lambda.elements()));
   __real_mu = af::moddims(af::real(_mu), _lDim);
@@ -439,7 +447,7 @@ template< typename T >
 void dualres::MultiResParameters<T>::_sample_momentum() {
   _momentum = af::randn(_lambda.dims(), _ctype, dualres::internals::_AF_RNG_);
   _initial_energy = -0.5 * af::sum<scalar_type>(af::real(af::conjg(_momentum) * _momentum));
-  _momentum = af::dft(af::idft(_momentum) / af::sqrt(_lambda_mass) *
+  _momentum = af::dft(af::idft(_momentum) / dualres::csqrt(_lambda_mass) *
 		      _positive_eigen_values / _momentum.elements());
 };
 
@@ -526,6 +534,12 @@ dualres::MultiResParameters<T>::MultiResParameters(
 
   _lDim = af::dim4(_lambda.elements());  // must be set before _initialize_mu()
   _positive_eigen_values = 1 - af::sign(af::real(_lambda));
+  const double pev_count = af::sum<double>(_positive_eigen_values);
+  std::cout << (int)pev_count << " eigen values have real-part > 0  ("
+	    << std::setprecision(2) << std::fixed
+	    << (pev_count / _lambda.elements() * 100) << "%)"
+	    << std::endl;
+  
   _lambda *= _theta[0];
   // _lambda_inv = 1 / _lambda;
   // af::replace(_lambda_inv, af::real(_lambda) != 0, 0);
@@ -541,6 +555,8 @@ dualres::MultiResParameters<T>::MultiResParameters(
   }
   _binary_data_positions = af::array(bdp.size(), bdp.data());
   _y0_indices = af::array(indices.size(), indices.data());
+
+  // std::cout << "dim Re(mu) = " << __real_mu.dims(0) << std::endl;
 };
 
 

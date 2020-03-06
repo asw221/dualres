@@ -8,6 +8,7 @@
 #include "CommandParser.h"
 #include "defines.h"
 #include "estimate_kernel_parameters.h"
+#include "gaussian_process_model.h"
 #include "HMCParameters.h"
 #include "kernels.h"
 #include "MultiResData.h"
@@ -152,13 +153,20 @@ int main(int argc, char *argv[]) {
 	    << _theta_.lambda().dims(0) << ", "
 	    << _theta_.lambda().dims(1) << ", "
 	    << _theta_.lambda().dims(2) << ")\n\n"
-	    << "mean( mu_0 ) = " 
-	    << (af::sum<float>(_theta_.mu()) / _theta_.indices().elements())
+	    << "Sum( mu_0 ) = " 
+	    << (af::sum<float>(_theta_.mu()))
 	    << std::endl;
 
   std::cout << "Krigging matrix has dimension: ("
 	    << _data_.W(0).dims(0) << ", " << _data_.W(0).dims(1) << ")"
 	    << std::endl;
+
+
+  std::cout << "(Extended) size of Y's: " << _data_.Y(0).dims(0) << ", "
+	    << _data_.Y(1).dims(0)
+	    << std::endl;
+  
+  dualres::fit_dualres_gaussian_process_model<scalar_type>(_data_, _theta_, _hmc_);
   
 
   // Finish by calling  nifti_image_free()
