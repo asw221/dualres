@@ -56,6 +56,7 @@ namespace dualres {
     unsigned int mcmc_nsave() const;
     unsigned int mcmc_thin() const;
     unsigned int seed() const;
+    unsigned int threads() const;
     typename std::vector<scalar_type> kernel_parameters() const;
     typename std::vector<scalar_type>::iterator kernel_begin();
     typename std::vector<scalar_type>::iterator kernel_end();
@@ -72,9 +73,12 @@ namespace dualres {
     unsigned int _mcmc_nsave;
     unsigned int _mcmc_thin;
     unsigned int _seed;
+    unsigned int _threads;
     std::vector<scalar_type> _kernel_params;
   };
 
+
+  
 
   template< typename T = double >
   class EstimRbfCommandParser {
@@ -126,8 +130,42 @@ namespace dualres {
     scalar_type _rho;
     std::vector<scalar_type> _kernel_params;
   };
+
+
+
+
+
+  template< typename T = float >
+  class FFTWWisdomCommandParser {
+  public:
+    typedef T scalar_type;
+    enum class call_status { success, error, help };
+    enum class fftw_flags { measure, patient, exhaustive };  // measure not used, currently
+
+    FFTWWisdomCommandParser(int argc, char **argv);
+    bool error() const;
+    bool flagged_exhaustive() const;
+    bool flagged_patient() const;
+    bool help_invoked() const;
+    bool native_grid() const;
+    bool operator!() const;
+    unsigned int threads() const;
+    std::string image_file() const;
+    operator bool() const;
+
+    void show_usage() const;
+
+  private:
+    call_status _status;
+    fftw_flags _planner_flag;
+    unsigned int _threads;
+    std::string _image_file;
+  };
   
 }
+
+
+
 
 
 
@@ -168,6 +206,7 @@ void dualres::CommandParser<T>::show_usage() const {
 #include "GPMCommandParser.inl"
 #include "EstimRbfCommandParser.inl"
 #include "NeighborhoodCommandParser.inl"
+#include "FFTWWisdomCommandParser.inl"
 
 #endif  // _DUALRES_COMMAND_PARSER_
 

@@ -1,6 +1,6 @@
 
 #include <iostream>
-#include <cmath>
+#include <math.h>
 
 #include "CommandParser.h"
 #include "kernels.h"

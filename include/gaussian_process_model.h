@@ -85,7 +85,7 @@ namespace dualres {
 	//  (v)   estimate of var mu
 	//  (vi)  confidence band given (iii)
 	_mu_ += _theta_.mu();
-	// _mu_sims_(save_count, af::span) = _theta_.mu();
+	// _mu_sims_(save_count, af::span) = _theualta_.mu();
 	_log_posterior_[save_count] = _theta_.log_posterior(_data_);
 	// for (int ii = 0; ii < _data_.n_datasets(); ii++)
 	//   _sigma_[ii] = _theta_.sigma(ii);

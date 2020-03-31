@@ -1,6 +1,38 @@
 
+#include <boost/filesystem.hpp>
 #include <iomanip>
 #include <iostream>
+
+#include "defines.h"
+
+
+int dualres::utilities::set_number_of_threads(const unsigned int threads) {
+  if (threads > 0 && threads <= dualres::internals::_MAX_THREADS_) {
+    dualres::internals::_N_THREADS_ = (int)threads;
+  }
+  return dualres::internals::_N_THREADS_;
+};
+
+
+int dualres::utilities::threads() {
+  return dualres::internals::_N_THREADS_;
+};
+  
+
+void dualres::utilities::set_seed(const unsigned int seed) {
+  dualres::internals::_RNG_.seed(seed);
+};
+
+  
+bool dualres::utilities::initialize_temporary_directory() {
+  boost::filesystem::create_directory(dualres::internals::_TEMP_DIR_);
+  return boost::filesystem::is_directory(dualres::internals::_TEMP_DIR_);
+};
+
+
+
+
+
 
 
 

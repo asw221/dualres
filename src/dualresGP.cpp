@@ -1,6 +1,6 @@
 
-#include <arrayfire.h>
 #include <Eigen/Core>
+#include <fftw3.h>
 #include <iostream>
 #include <nifti1_io.h>
 #include <vector>
@@ -11,13 +11,28 @@
 #include "gaussian_process_model.h"
 #include "HMCParameters.h"
 #include "kernels.h"
-#include "MultiResData.h"
-#include "MultiResParameters.h"
+#include "kriging_matrix.h"
+#include "MultiResData2.h"
+#include "MultiResParameters2.h"
 #include "nifti_manipulation.h"
 
 
 
 // return 1 for error; return 0 for success
+
+
+template< typename T >
+bool compute_kernel_parameters_if_needed(
+  std::vector<T> &theta,
+  const nifti_image * const input_data
+);
+
+template< typename T >
+bool valid_kernel_parameters(const std::vector<T> &theta);
+
+
+
+
 
 int main(int argc, char *argv[]) {
   typedef float scalar_type;
@@ -29,6 +44,12 @@ int main(int argc, char *argv[]) {
   else if (inputs.help_invoked())
     return 0;
 
+
+  dualres::set_number_of_threads(inputs.threads());
+  Eigen::setNbThreads(6);
+  fftw_plan_with_nthreads(dualres::internals::_N_THREADS_);
+  
+  
   if (!inputs.highres_file().empty())
     std::cout << "High-resolution file: " << inputs.highres_file() << std::endl;
   if (!inputs.stdres_file().empty())
@@ -37,12 +58,11 @@ int main(int argc, char *argv[]) {
 
   dualres::set_seed(inputs.seed());
 
-  std::vector<scalar_type> kernel_params = inputs.kernel_parameters();
   scalar_type neighborhood = inputs.neighborhood();
   int n_datasets = 1;
   
-  nifti_image* _std_res_;
   nifti_image* _high_res_ = nifti_image_read(inputs.highres_file().c_str(), 1);
+  nifti_image* _std_res_;
 
   if (!inputs.stdres_file().empty()) {
     _std_res_ = nifti_image_read(inputs.stdres_file().c_str(), 1);
@@ -55,49 +75,17 @@ int main(int argc, char *argv[]) {
   }
 
   
+  std::vector<scalar_type> kernel_params = inputs.kernel_parameters();
   // If kernel parameters are not given, estimate them from inputs. Use
   // Std Res image first if available
-  if (kernel_params.empty()) {
-    std::vector<double> kernel_params_dtemp{1, 0.6, 1.5};
-    // ^^ provide better starting values, especially for marginal variance
-
-    std::cout << "Estimating kernel parameters... " << std::flush;
-    int kp_success;  // 0 - success, 1 - error
-    if (!inputs.stdres_file().empty()) {
-      kp_success = dualres::compute_rbf_parameters(
-        kernel_params_dtemp, dualres::compute_mce_summary_data(_std_res_));
-    }
-    else {
-      kp_success = dualres::compute_rbf_parameters(
-        kernel_params_dtemp, dualres::compute_mce_summary_data(_high_res_));
-    }
-    if (kp_success == 1) {
-      std::cerr << "Could not estimate kernel parameters.\n"
-		<< "Try re-running with the --kernel argument supplied"
-		<< std::endl;
-      return 1;
-    }
-    else {
-      for (int i = 0; i < kernel_params_dtemp.size(); i++)
-	kernel_params.push_back((scalar_type)kernel_params_dtemp[i]);
-      std::cout << "Done!" << std::endl;
-    }
+  if (!inputs.stdres_file().empty()) {
+    if (!compute_kernel_parameters_if_needed(kernel_params, _std_res_))  return 1;
   }
-  else {
-    // Error check input kernel parameters:
-    if (kernel_params[0] <= 0) {
-      std::cerr << "First kernel parameter (marginal variance) must be > 0\n";
-      return 1;
-    }
-    if (kernel_params[1] <= 0) {
-      std::cerr << "Second kernel parameter (bandwidth) must be > 0\n";
-      return 1;
-    }
-    if (kernel_params[2] <= 0 || kernel_params[2] > 2) {
-      std::cerr << "Third kernel parameter (exponent) must be in (0, 2]\n";
-      return 1;
-    }
+  else if (!compute_kernel_parameters_if_needed(kernel_params, _high_res_)) {
+    return 1;
   }
+  if (!valid_kernel_parameters(kernel_params))  return 1;
+    
 
   // If the (mm) neighborhood is not given, compute it from the kernel
   // parameters assuming sparsity after a cuttoff level of 0.1
@@ -132,10 +120,11 @@ int main(int argc, char *argv[]) {
   if (!inputs.stdres_file().empty()) {
     _data_.push_back_data(dualres::get_nonzero_data_array<scalar_type>(_std_res_));
     // push_back_weight
-    dualres::construct_and_store_krigging_array<scalar_type>(
-      _data_, _high_res_, _std_res_,
-      kernel_params, neighborhood, _theta_.lambda().dims()
+    dualres::kriging_matrix_data<scalar_type> kmd =
+      dualres::get_sparse_kriging_array_data<scalar_type>(
+        _high_res_, _std_res_, kernel_params, neighborhood
     );
+    _data_.push_back_weight(kmd);
   }
 
   
@@ -149,27 +138,88 @@ int main(int argc, char *argv[]) {
 	    << "\nLeapfrog = " << inputs.mcmc_leapfrog_steps() // _hmc_.integrator_steps()
 	    << std::endl;
 
-  std::cout << "Eigen vector array has dimensions ("
-	    << _theta_.lambda().dims(0) << ", "
-	    << _theta_.lambda().dims(1) << ", "
-	    << _theta_.lambda().dims(2) << ")\n\n"
-	    << "Sum( mu_0 ) = " 
-	    << (af::sum<float>(_theta_.mu()))
+  std::cout << "Eigen vector array has size ("
+	    << _theta_.lambda().size() << ")\n\n"
+	    << "Sum( Re(mu_0) ) = " 
+	    << _theta_.mu().sum()
 	    << std::endl;
 
-  std::cout << "Krigging matrix has dimension: ("
-	    << _data_.W(0).dims(0) << ", " << _data_.W(0).dims(1) << ")"
-	    << std::endl;
+  if (!inputs.stdres_file().empty()) {
+    std::cout << "Kriging matrix has dimension: ("
+	      << _data_.W(0).rows() << ", " << _data_.W(0).cols() << ")"
+	      << std::endl;
+  }
 
 
-  std::cout << "(Extended) size of Y's: " << _data_.Y(0).dims(0) << ", "
-	    << _data_.Y(1).dims(0)
+  std::cout << "(Extended) size of Y's: " << _data_.Y(0).size() << ", "
+	    << _data_.Y(1).size()
 	    << std::endl;
   
-  dualres::fit_dualres_gaussian_process_model<scalar_type>(_data_, _theta_, _hmc_);
+  // dualres::fit_dualres_gaussian_process_model<scalar_type>(_data_, _theta_, _hmc_);
   
 
   // Finish by calling  nifti_image_free()
-  if (!inputs.highres_file().empty())  nifti_image_free(_high_res_);
-  if (!inputs.stdres_file().empty())   nifti_image_free(_std_res_);
+  nifti_image_free(_high_res_);
+  nifti_image_free(_std_res_);
+  // fftw_cleanup_threads();
 }
+
+
+
+
+
+
+
+
+
+template< typename T >
+bool compute_kernel_parameters_if_needed(
+  std::vector<T> &theta,
+  const nifti_image * const input_data
+) {
+  bool success = true;
+  if (theta.empty()) {
+    std::vector<double> kernel_params_dtemp{1, 0.6, 1.5};
+    // ^^ provide better starting values, especially for marginal variance
+
+    std::cout << "Estimating kernel parameters... " << std::flush;
+    int kp_success;  // 0 - success, 1 - error
+    kp_success = dualres::compute_rbf_parameters(
+      kernel_params_dtemp, dualres::compute_mce_summary_data(input_data));
+    if (kp_success == 1) {
+      std::cerr << "Could not estimate kernel parameters.\n"
+		<< "Try re-running with the --kernel argument supplied"
+		<< std::endl;
+      success = false;
+    }
+    else {
+      for (int i = 0; i < kernel_params_dtemp.size(); i++)
+	kernel_params.push_back((scalar_type)kernel_params_dtemp[i]);
+      std::cout << "Done!" << std::endl;
+    }
+  }
+  else {
+  }
+  return success;
+};
+
+
+ 
+template< typename T >
+bool valid_kernel_parameters(const std::vector<T> &theta) {
+  // Error check input kernel parameters:
+  bool success = true;
+  if (theta[0] <= 0) {
+    std::cerr << "First kernel parameter (marginal variance) must be > 0\n";
+    success = false;
+  }
+  if (theta[1] <= 0) {
+    std::cerr << "Second kernel parameter (bandwidth) must be > 0\n";
+    success = false;
+  }
+  if (theta[2] <= 0 || theta[2] > 2) {
+    std::cerr << "Third kernel parameter (exponent) must be in (0, 2]\n";
+    success = false;
+  }
+  return success;
+};

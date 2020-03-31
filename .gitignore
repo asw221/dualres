@@ -1,8 +1,10 @@
-# Ignore the build and lib dirs
+# Ignore the bin and build dir
 build
+bin
 
 # Ignore any executables
 bin/*
+Makefile
 
 # Ignore tests (temporary)
 test

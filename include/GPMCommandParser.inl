@@ -37,7 +37,8 @@ dualres::GPMCommandParser<T>::GPMCommandParser(int argc, char* argv[]) {
 
   const int K = 3;  // number of kernel parameters
   const auto time = std::chrono::high_resolution_clock::now().time_since_epoch();
-  
+
+  // Default values --------------------------------------------------
   _neighborhood = -1;
   _mcmc_burnin = 1000;
   _mcmc_leapfrog_steps = 10;
@@ -46,6 +47,7 @@ dualres::GPMCommandParser<T>::GPMCommandParser(int argc, char* argv[]) {
   _seed = static_cast<unsigned int>(
     std::chrono::duration_cast<std::chrono::milliseconds>(time).count());
   _seed = std::max(_seed, (unsigned)1);
+  _threads = (unsigned)0;
   
   // _kernel_params.resize(3);
   if (argc < 2) {
@@ -212,10 +214,27 @@ dualres::GPMCommandParser<T>::GPMCommandParser(int argc, char* argv[]) {
 	  _status = call_status::error;
 	}
       }
+      else if (arg == "--threads") {
+	if (i + 1 < argc) {
+	  i++;
+	  try {
+	    _threads = (unsigned)std::abs(std::stoi(argv[i]));
+	  }
+	  catch (...) {
+	    std::cerr << "\nWarning: --threads option requires 1 integer argument\n";
+	    _status = call_status::error;
+	  }
+	}
+	else {
+	  std::cerr << "\nWarning: --threads option requires 1 integer argument\n";
+	  _status = call_status::error;
+	}
+      }
       else {
 	std::cerr<< "\nWarning: Unrecognized option: " << arg << std::endl;
 	_status = call_status::error;
       }
+      
       if (error() || help_invoked()) {
 	show_usage();
 	break;
@@ -300,6 +319,12 @@ unsigned int dualres::GPMCommandParser<T>::mcmc_thin() const {
 template< typename T >
 unsigned int dualres::GPMCommandParser<T>::seed() const {
   return _seed;
+};
+
+
+template< typename T >
+unsigned int dualres::GPMCommandParser<T>::threads() const {
+  return _threads;
 };
 
 
