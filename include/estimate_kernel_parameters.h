@@ -1,5 +1,4 @@
 
-#include <arrayfire.h>
 #include <cmath>
 #include <iostream>
 #include <Eigen/Core>
@@ -8,7 +7,6 @@
 #include <vector>
 
 #include "defines.h"
-// #include "kernels.h"
 #include "nifti_manipulation.h"
 #include "perturbation_matrix.h"
 
@@ -82,10 +80,10 @@ namespace dualres {
 
 
   dualres::mce_data compute_mce_summary_data(const nifti_image* const img) {
-    const dualres::nifti_data dtype = dualres::nii_data_type(img);
-    if (dtype == dualres::nifti_data::FLOAT)
+    const dualres::nifti_data_type dtype = dualres::nii_data_type(img);
+    if (dtype == dualres::nifti_data_type::FLOAT)
       return dualres::compute_mce_summary_data_impl<float>(img);
-    else if (dtype == dualres::nifti_data::DOUBLE)
+    else if (dtype == dualres::nifti_data_type::DOUBLE)
       return dualres::compute_mce_summary_data_impl<double>(img);
     else
       throw std::logic_error("compute_mce_summary_data: unimplemented image type");
@@ -148,7 +146,7 @@ namespace dualres {
     objective_data.covariance = std::move(_y);
     optimizer.set_lower_bounds(lb);
     optimizer.set_upper_bounds(ub);
-    optimizer.set_min_objective(_rbf_least_squares, &objective_data);
+    optimizer.set_min_objective(dualres::_rbf_least_squares, &objective_data);
     optimizer.set_xtol_rel(1e-4);
     try {
       optimizer.optimize(theta, min_obj);

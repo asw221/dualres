@@ -52,7 +52,6 @@ int main (int argc, char* argv[]) {
   catch (...) {
     std::cerr << "Error reading data from file: " << inputs.image_file()
 	      << std::endl;
-    nifti_image_free(__nii);
     return 1;
   }
   
