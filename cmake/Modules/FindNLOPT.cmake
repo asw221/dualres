@@ -1,11 +1,3 @@
-# Copyright (c) 2011-2019, The DART development contributors
-# All rights reserved.
-#
-# The list of contributors can be found at:
-#   https://github.com/dartsim/dart/blob/master/LICENSE
-#
-# This file is provided under the "BSD-style" License
-
 # Find NLOPT
 #
 # This sets the following variables:
@@ -15,8 +7,9 @@
 #   NLOPT_DEFINITIONS
 #   NLOPT_VERSION
 #
-# and the following targets:
+# Defines the following targets:
 #   NLOPT::nlopt
+
 
 if( NOT NLOPT_ROOT AND DEFINED ENV{NLOPTDIR} )
   set( NLOPT_ROOT $ENV{NLOPTDIR} )
