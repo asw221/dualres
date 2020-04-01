@@ -1,5 +1,4 @@
 
-#include <arrayfire.h>
 #include <Eigen/Core>
 #include <Eigen/Dense>
 #include <cmath>
@@ -31,80 +30,6 @@ namespace dualres {
   };
 
 
-
-
-
-  template< typename T >
-  af::array construct_sparse_kriging_array(
-    const dualres::kriging_matrix_data<T> &kmd
-  ) {
-    return af::sparse(kmd.nrow, kmd.ncol, kmd._Data.size(),
-		      kmd._Data.data(), kmd.cum_row_counts.data(),
-		      kmd.column_indices.data());
-  };
-  
-
-  
-
-  template< typename T >
-  void re_grid_kriging_matrix_data(
-    dualres::kriging_matrix_data<T>& kmd,
-    const af::dim4& old_grid_dim,
-    const af::dim4& new_grid_dim
-  ) {
-    // re-compute number columns
-    int new_ncol = 1;
-    std::vector<int> ijk(3);
-    for (int i = 0; i < 3; i++) {  // assume 3D grid
-      new_ncol *= new_grid_dim[i];
-      if (old_grid_dim[i] > new_grid_dim[i])
-	throw std::logic_error(
-          "re_grid_kriging_matrix_data: old grid should be <= new grid");
-    }
-    kmd.ncol = new_ncol;
-    // re-compute column indices
-    // (same ijk indices, different grid dimensions)
-    for (std::vector<int>::iterator it = kmd.column_indices.begin();
-	 it != kmd.column_indices.end(); ++it) {
-      ijk[0] = (*it) % old_grid_dim[0];
-      ijk[1] = ((*it) / old_grid_dim[0]) % old_grid_dim[1];
-      ijk[2] = ((*it) / (old_grid_dim[0] * old_grid_dim[1])) % old_grid_dim[2];
-      *it = ijk[2] * (new_grid_dim[1] * new_grid_dim[0]) +
-	ijk[1] * new_grid_dim[0] + ijk[0];
-    }
-  };
-  
-
-  
-
-  
-
-
-  af::array expand_grid(const af::array &pos_griddims) {
-    const int D = pos_griddims.dims(0);
-    if (D > 4) {
-      throw std::logic_error("expand_grid: pos_griddims must be <= 4 in size");
-    }
-    std::vector<int> N(4), _NN(4);
-    int _nn_prod = 1;
-    for (int j = 0; j < 4; j++) {
-      if (j < D) {
-	N[j] = pos_griddims(j).scalar<int>();
-	_NN[j] = 2 * N[j] + 1;
-	_nn_prod *= _NN[j];
-      }
-      else {
-	N[j] = 1;
-	_NN[j] = 1;
-      }
-    }
-    const af::dim4 _d0(_NN[0], _NN[1], _NN[2], _NN[3]);
-    const af::dim4 _d1(_nn_prod);
-    af::array grid(_nn_prod, D);
-    for (int j = 0; j < D; j++)
-      grid.col(j) = af::moddims(af::range(_d0, j) - N[j], _d1);
-    return grid;
-  };
 
 
 
@@ -174,6 +99,7 @@ namespace dualres {
     return Psub;
   };
 
+  
 
   
   template< typename T = float >
@@ -205,18 +131,6 @@ namespace dualres {
     return Dist;
   };
 
-
-
-
-  // Eigen::MatrixXi reorient_ijk(const Eigen::MatrixXi &ijk, const dualres::qform_type &Qform) {
-  //   Eigen::MatrixXf ijk_float = ijk.cast<float>();
-  //   Eigen::MatrixXi ijk_new;
-  //   ijk_float.conservativeResize(ijk.rows(), ijk.cols() + 1);
-  //   ijk_float.col(ijk_float.cols() - 1) = Eigen::VectorXf::Ones(ijk.rows());
-  //   ijk_new = (ijk_float * Qform.transpose()).cast<int>();
-  //   ijk_new.conservativeResize(ijk.rows(), ijk.cols());
-  //   return ijk_new;
-  // };
 
   
 
@@ -353,13 +267,13 @@ namespace dualres {
 	    //   (current_ijk_hr[0] - bb_hr.ijk_min[0]) * bhr_dims[2] * bhr_dims[1];
 	    // bounded_hr_index.push_back(bhr_i);  // (i)
 	    if (bounded_nonzero_index_hr[bhr_i] >= 0) {
-	    bounded_hr_index.push_back(bounded_nonzero_index_hr[bhr_i]);  // (i)
-	    perturbation_index.push_back(j);                              // (ii)
-	    dist = (Qform_std * current_ijk_std -
-		    Qform_hr * current_ijk_hr.cast<float>()).norm();
-	    kernel_distances.push_back(dualres::kernels::rbf(dist,
-              rbf_params[1], rbf_params[2], rbf_params[0]));              // (iii)
-	    row_count++;
+	      bounded_hr_index.push_back(bounded_nonzero_index_hr[bhr_i]);  // (i)
+	      perturbation_index.push_back(j);                              // (ii)
+	      dist = (Qform_std * current_ijk_std -
+		      Qform_hr * current_ijk_hr.cast<float>()).norm();
+	      kernel_distances.push_back(dualres::kernels::rbf(dist,
+                rbf_params[1], rbf_params[2], rbf_params[0]));              // (iii)
+	      row_count++;
 	    }
 	  }
 	}
@@ -412,36 +326,127 @@ namespace dualres {
   
 
 
-  template< typename Scalar = float >
-  af::array sparse_kriging_array(
-    const nifti_image* const high_res,
-    const nifti_image* const std_res,
-    const std::vector<float> &rbf_params,
-    const float &neighborhood_radius,
-    const af::dim4 &extended_grid_dims
-  ) {
-    const dualres::nifti_bounding_box bb_hr = dualres::get_bounding_box(high_res);
-    const Eigen::Vector3i bhr_dims = bb_hr.ijk_max - bb_hr.ijk_min +
-      Eigen::Vector3i::Ones();
-    const af::dim4 bhr_grid(bhr_dims[0], bhr_dims[1], bhr_dims[2]);
-    for (int i = 0; i < 3; i++) {
-      if (bhr_grid[i] > extended_grid_dims[i])
-	throw std::logic_error(
-          "sparse_kriging_array: old grid should be <= new grid");
-    }
-    dualres::kriging_matrix_data<float> kmd =
-      dualres::get_sparse_kriging_array_data<Scalar>(
-        high_res, std_res, rbf_params, neighborhood_radius);
-    dualres::re_grid_kriging_matrix_data<float>(kmd, bhr_grid, extended_grid_dims);
-    return dualres::construct_sparse_kriging_array<float>(kmd);
-  };
-
-
-
   
   
-}
+}  // namespace dualres 
 
 
 #endif  // _DUALRES_KRIGING_MATRIX_
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// Recycling
+
+
+
+  // template< typename T >
+  // af::array construct_sparse_kriging_array(
+  //   const dualres::kriging_matrix_data<T> &kmd
+  // ) {
+  //   return af::sparse(kmd.nrow, kmd.ncol, kmd._Data.size(),
+  // 		      kmd._Data.data(), kmd.cum_row_counts.data(),
+  // 		      kmd.column_indices.data());
+  // };
+  
+
+  
+
+  // template< typename T >
+  // void re_grid_kriging_matrix_data(
+  //   dualres::kriging_matrix_data<T>& kmd,
+  //   const af::dim4& old_grid_dim,
+  //   const af::dim4& new_grid_dim
+  // ) {
+  //   // re-compute number columns
+  //   int new_ncol = 1;
+  //   std::vector<int> ijk(3);
+  //   for (int i = 0; i < 3; i++) {  // assume 3D grid
+  //     new_ncol *= new_grid_dim[i];
+  //     if (old_grid_dim[i] > new_grid_dim[i])
+  // 	throw std::logic_error(
+  //         "re_grid_kriging_matrix_data: old grid should be <= new grid");
+  //   }
+  //   kmd.ncol = new_ncol;
+  //   // re-compute column indices
+  //   // (same ijk indices, different grid dimensions)
+  //   for (std::vector<int>::iterator it = kmd.column_indices.begin();
+  // 	 it != kmd.column_indices.end(); ++it) {
+  //     ijk[0] = (*it) % old_grid_dim[0];
+  //     ijk[1] = ((*it) / old_grid_dim[0]) % old_grid_dim[1];
+  //     ijk[2] = ((*it) / (old_grid_dim[0] * old_grid_dim[1])) % old_grid_dim[2];
+  //     *it = ijk[2] * (new_grid_dim[1] * new_grid_dim[0]) +
+  // 	ijk[1] * new_grid_dim[0] + ijk[0];
+  //   }
+  // };
+  
+
+  
+
+  
+
+
+  // af::array expand_grid(const af::array &pos_griddims) {
+  //   const int D = pos_griddims.dims(0);
+  //   if (D > 4) {
+  //     throw std::logic_error("expand_grid: pos_griddims must be <= 4 in size");
+  //   }
+  //   std::vector<int> N(4), _NN(4);
+  //   int _nn_prod = 1;
+  //   for (int j = 0; j < 4; j++) {
+  //     if (j < D) {
+  // 	N[j] = pos_griddims(j).scalar<int>();
+  // 	_NN[j] = 2 * N[j] + 1;
+  // 	_nn_prod *= _NN[j];
+  //     }
+  //     else {
+  // 	N[j] = 1;
+  // 	_NN[j] = 1;
+  //     }
+  //   }
+  //   const af::dim4 _d0(_NN[0], _NN[1], _NN[2], _NN[3]);
+  //   const af::dim4 _d1(_nn_prod);
+  //   af::array grid(_nn_prod, D);
+  //   for (int j = 0; j < D; j++)
+  //     grid.col(j) = af::moddims(af::range(_d0, j) - N[j], _d1);
+  //   return grid;
+  // };
+
+
+
+
+  // template< typename Scalar = float >
+  // af::array sparse_kriging_array(
+  //   const nifti_image* const high_res,
+  //   const nifti_image* const std_res,
+  //   const std::vector<float> &rbf_params,
+  //   const float &neighborhood_radius,
+  //   const af::dim4 &extended_grid_dims
+  // ) {
+  //   const dualres::nifti_bounding_box bb_hr = dualres::get_bounding_box(high_res);
+  //   const Eigen::Vector3i bhr_dims = bb_hr.ijk_max - bb_hr.ijk_min +
+  //     Eigen::Vector3i::Ones();
+  //   const af::dim4 bhr_grid(bhr_dims[0], bhr_dims[1], bhr_dims[2]);
+  //   for (int i = 0; i < 3; i++) {
+  //     if (bhr_grid[i] > extended_grid_dims[i])
+  // 	throw std::logic_error(
+  //         "sparse_kriging_array: old grid should be <= new grid");
+  //   }
+  //   dualres::kriging_matrix_data<float> kmd =
+  //     dualres::get_sparse_kriging_array_data<Scalar>(
+  //       high_res, std_res, rbf_params, neighborhood_radius);
+  //   dualres::re_grid_kriging_matrix_data<float>(kmd, bhr_grid, extended_grid_dims);
+  //   return dualres::construct_sparse_kriging_array<float>(kmd);
+  // };
+
 

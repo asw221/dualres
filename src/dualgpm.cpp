@@ -59,14 +59,15 @@ int main(int argc, char *argv[]) {
   dualres::set_seed(inputs.seed());
 
   scalar_type neighborhood = inputs.neighborhood();
-  int n_datasets = 1;
+  // int n_datasets = 1;
+  const bool _standard_resolution_available = !inputs.stdres_file().empty();
+  const int _n_datasets = _standard_resolution_available ? 2 : 1;
   
   nifti_image* _high_res_ = nifti_image_read(inputs.highres_file().c_str(), 1);
   nifti_image* _std_res_;
 
   if (!inputs.stdres_file().empty()) {
     _std_res_ = nifti_image_read(inputs.stdres_file().c_str(), 1);
-    n_datasets++;
     
     if (!dualres::same_data_types(_high_res_, _std_res_)) {
       std::cerr << "Cannot mix image data types!";
@@ -78,7 +79,7 @@ int main(int argc, char *argv[]) {
   std::vector<scalar_type> kernel_params = inputs.kernel_parameters();
   // If kernel parameters are not given, estimate them from inputs. Use
   // Std Res image first if available
-  if (!inputs.stdres_file().empty()) {
+  if (_standard_resolution_available) {
     if (!compute_kernel_parameters_if_needed(kernel_params, _std_res_))  return 1;
   }
   else if (!compute_kernel_parameters_if_needed(kernel_params, _high_res_)) {
@@ -102,20 +103,10 @@ int main(int argc, char *argv[]) {
     inputs.mcmc_leapfrog_steps()
   );
 
-  std::cout << "Constructing circulant base and initializing parameters... "
-	    << std::flush;
-  
-  dualres::MultiResParameters<scalar_type> _theta_(
-    n_datasets, kernel_params,
-    dualres::get_nonzero_indices_bounded(_high_res_),
-    dualres::qform_matrix(_high_res_),
-    dualres::use_lambda_method::EXTENDED
-  );
-  std::cout << "Done!" << std::endl;
 
+  std::vector<scalar_type> __Yh = dualres::get_nonzero_data<scalar_type>(_high_res_);
   dualres::MultiResData<scalar_type> _data_;
-  _data_.push_back_data(dualres::put_data_in_extended_grid<scalar_type>(
-    _high_res_, _theta_.lambda().dims()));
+  _data_.push_back_data(__Yh.data(), __Yh.size());
   
   if (!inputs.stdres_file().empty()) {
     _data_.push_back_data(dualres::get_nonzero_data_array<scalar_type>(_std_res_));
@@ -126,6 +117,18 @@ int main(int argc, char *argv[]) {
     );
     _data_.push_back_weight(kmd);
   }
+
+  
+  std::cout << "Constructing circulant base and initializing parameters... "
+	    << std::flush;
+  
+  dualres::MultiResParameters<scalar_type> _theta_(
+    _n_datasets, kernel_params,
+    dualres::get_nonzero_indices_bounded(_high_res_),
+    dualres::qform_matrix(_high_res_),
+    dualres::use_lambda_method::EXTENDED
+  );
+  std::cout << "Done!" << std::endl;
 
   
   

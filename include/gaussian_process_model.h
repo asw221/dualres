@@ -1,9 +1,8 @@
 
-#include <arrayfire.h>
 #include <chrono>
+#include <Eigen/Core>
 #include <fstream>
 #include <iostream>
-// #include <random>
 #include <vector>
 
 
@@ -28,8 +27,9 @@ namespace dualres {
   class mcmc_output {
   public:
     typedef T value_type;
+    typedef typename Eigen::Vector<value_type, Eigen::Dynamic> VectorType;
     
-    std::vector<af::array> mu;
+    std::vector<VectorType> mu;
     std::vector<std::vector<T> > sigma;
     std::vector<T> log_posterior;
     T sampling_time;
@@ -48,17 +48,13 @@ namespace dualres {
   
 
   template< typename T >
-  void fit_dualres_gaussian_process_model(
+  void fit_gpm_with_sor_approximation(
     dualres::MultiResData<T> &_data_,
     dualres::MultiResParameters<T> &_theta_,
     dualres::HMCParameters<T> &_hmc_
   ) {
     T mh_rate;
     int save_count = 0;
-    // af::array _mu_sims_(_hmc_.n_save(), _theta_.indices().numel());
-    af::array _mu_ = af::constant(0, _theta_.indices().elements(),
-				  dualres::data_types<T>::af_dtype);
-    std::vector<T> _mu_host_(_mu_.elements());
     std::vector<T> _log_posterior_(_hmc_.n_save());
 
     //
@@ -85,7 +81,6 @@ namespace dualres {
 	//  (v)   estimate of var mu
 	//  (vi)  confidence band given (iii)
 	_mu_ += _theta_.mu();
-	// _mu_sims_(save_count, af::span) = _theualta_.mu();
 	_log_posterior_[save_count] = _theta_.log_posterior(_data_);
 	// for (int ii = 0; ii < _data_.n_datasets(); ii++)
 	//   _sigma_[ii] = _theta_.sigma(ii);
