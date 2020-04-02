@@ -2,8 +2,8 @@
 #include <iostream>
 #include <string>
 
-#include "nifti_manipulation.h"
-#include "utilities.h"
+#include "dualres/nifti_manipulation.h"
+#include "dualres/utilities.h"
 
 
 template< typename T >

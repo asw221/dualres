@@ -1,13 +1,7 @@
 
-#include <cmath>
 #include <Eigen/Core>
-#include <math.h>
-#include <omp.h>
-#include <vector>
 
-
-#include "dualres/defines.h"
-#include "dualres/kernels.h"
+#include "dualres/nifti_manipulation.h"
 
 
 #ifndef _DUALRES_CIRCULANT_BASE_

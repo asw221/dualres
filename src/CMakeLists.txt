@@ -11,6 +11,12 @@ if (NOT TARGET OpenMP::OpenMP_CXX)
 endif()
 
 
+
+# Anything that uses to a CommandParser object must link to
+# the nifti libraries
+
+
+
 include_directories(${dualres_SOURCE_DIR}/include)
 include_directories(${dualres_SOURCE_DIR}/lib/nifti/include)
 

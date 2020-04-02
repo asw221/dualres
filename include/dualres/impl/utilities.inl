@@ -5,7 +5,7 @@
 #include <iostream>
 #include <string>
 
-#include "defines.h"
+#include "dualres/defines.h"
 
 
 bool dualres::initialize_temporary_directory() {

@@ -7,8 +7,8 @@
 #include <math.h>
 #include <vector>
 
-#include "defines.h"
-#include "kernels.h"
+#include "dualres/defines.h"
+#include "dualres/nifti_manipulation.h"
 
 
 
@@ -33,9 +33,12 @@ Eigen::Array<scalar_type, Eigen::Dynamic, 1> dualres::circulant_base_3d(
   const bool use_nearest_power_2
 ) {
   const int D = 3;  // 3d grid
+  Eigen::Vector4f ijk0 = Eigen::Vector4f::Zero();
+  float j, k;
+  int base_len = 1;
+  int ll, mm, nn;
   std::vector<int> grid_dims(D);  // dimensions of (extended) data grid
   std::vector<int> base_dims(D);  // dimensions of circulant matrix base
-  int base_len = 1;
   // Allocate grid_dims and base_dims
   for (int ll = 0; ll < D; ll++) {
     if (data_grid_dims[ll] <= 1)
@@ -62,16 +65,16 @@ Eigen::Array<scalar_type, Eigen::Dynamic, 1> dualres::circulant_base_3d(
     
   Eigen::Array<scalar_type, Eigen::Dynamic, 1> base(base_len);
 
-  // #pragma omp parallel for shared(base, base_dims, dim0_seq, grid_dims, Qform) private(ijk0, j, k, ll, mm, nn) schedule(static, base_dims[0] / dualres::__internals::_N_THREADS_)
-  for (int ll = 0; ll < base_dims[0]; ll++) {
-    float j = 0;
-    Eigen::Vector4f ijk0 = Eigen::Vector4f::Zero();
+#pragma omp parallel for shared(base, base_dims, dim0_seq, grid_dims, Qform) private(ijk0, j, k, ll, mm, nn) schedule(static, base_dims[0] / dualres::__internals::_N_THREADS_)
+  for (ll = 0; ll < base_dims[0]; ll++) {
+    j = 0;
+    ijk0 = Eigen::Vector4f::Zero();
     ijk0[0] = dim0_seq[ll];
-    for (int mm = 0; mm < base_dims[1]; mm++) {
-      float k = 0;
+    for (mm = 0; mm < base_dims[1]; mm++) {
+      k = 0;
       if (mm < grid_dims[1]) ++j; else --j;
       ijk0[1] = j - 1;
-      for (int nn = 0; nn < base_dims[2]; nn++) {
+      for (nn = 0; nn < base_dims[2]; nn++) {
 	if (nn < grid_dims[2]) ++k; else --k;
 	ijk0[2] = k - 1;
 	// base[ nn + mm * base_dims[2] + ll * base_dims[1] * base_dims[2] ] =

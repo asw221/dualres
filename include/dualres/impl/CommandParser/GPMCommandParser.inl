@@ -14,13 +14,19 @@ void dualres::GPMCommandParser<T>::show_usage() const {
   std::cerr << "\nUsage:\n"
 	    << "\tdualresGP <options>\n\n"
 	    << "Options:\n"
+	    << "\t--burnin  int  number of MCMC burnin iterations\n"
 	    << "\t--highres path/to/img1\n"
-	    << "\t--kernel  f1 f2 f3\n"
-	    << "\t--neighborhood f1"
+	    << "\t--kernel  f1 f2 f3  Gaussian process kernel parameters\n"
+	    << "\t--leapfrog int  number of MCMC integrator steps\n"
+	    << "\t--neighborhood f1   neighborhood size (mm) for kriging approximation\n"
+	    << "\t--nsave   int  number of MCMC samples to save in output\n"
 	    << "\t--stdres  path/to/img2\n"
-	    << "\nWhere img[1-2] are valid NIfTI files and f[1-3] are parameters "
-	    << "of an exponential radial kernel function.\n\n"
-	    << "See dualresGP --help for more information.\n";
+	    << "\t--theta   alias for --kernel\n"
+	    << "\t--thin    int  thinning factor for MCMC samples\n"
+	    << "\t--seed    int  RNG seed\n"
+	    << "\t--threads int  number of threads for parallel computations\n"
+	    << "\img[1-2] are valid NIfTI files and f[1-3] are parameters "
+	    << "of an exponential radial kernel function.\n\n";
 };
 
 
