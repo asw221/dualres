@@ -14,6 +14,9 @@
 
 namespace dualres {
 
+  typedef Eigen::Matrix<float, 4, 4, Eigen::RowMajor> qform_type;
+
+  
 
   dualres::nifti_data_type nii_data_type(const nifti_image* const nii) {
     dualres::nifti_data_type __dt = dualres::nifti_data_type::OTHER;
@@ -252,6 +255,12 @@ namespace dualres {
 
   
 }  // namespace dualres
+
+
+
+
+
+
 
 
 

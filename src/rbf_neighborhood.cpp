@@ -2,8 +2,8 @@
 #include <iostream>
 #include <math.h>
 
-#include "CommandParser.h"
-#include "kernels.h"
+#include "dualres/CommandParser.h"
+#include "dualres/kernels.h"
 
 
 

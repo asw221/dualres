@@ -6,8 +6,8 @@
 #include <vector>
 
 
-#include "defines.h"
-#include "kernels.h"
+#include "dualres/defines.h"
+#include "dualres/kernels.h"
 
 
 #ifndef _DUALRES_CIRCULANT_BASE_
@@ -41,7 +41,7 @@ namespace dualres {
 }
 
 
-#include "circulant_base.inl"
+#include "dualres/impl/circulant_base.inl"
 
 #endif  // _DUALRES_CIRCULANT_BASE_
 

@@ -4,7 +4,7 @@
 #include <vector>
 
 
-#include "defines.h"
+#include "dualres/defines.h"
 
 
 #ifndef _DUALRES_UTILITIES_
@@ -70,6 +70,6 @@ namespace dualres {
 }  // namespace dualres ----------------------------------------------
 
 
-#include "utilities.inl"
+#include "dualres/impl/utilities.inl"
 
 #endif  // _DUALRES_UTILITIES_

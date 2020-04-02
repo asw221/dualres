@@ -34,7 +34,7 @@ namespace dualres {
 
 
 
-#include "kernels.inl"
+#include "dualres/impl/kernels.inl"
 
 #endif  // _DUALRES_KERNELS_
 

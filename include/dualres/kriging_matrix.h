@@ -7,11 +7,11 @@
 #include <nifti1_io.h>
 #include <vector>
 
-#include "defines.h"
-#include "eigen_slicing.h"
-#include "kernels.h"
-#include "nifti_manipulation.h"
-#include "utilities.h"
+#include "dualres/defines.h"
+#include "dualres/eigen_slicing.h"
+#include "dualres/kernels.h"
+#include "dualres/nifti_manipulation.h"
+#include "dualres/utilities.h"
 
 
 #ifndef _DUALRES_KRIGING_MATRIX_

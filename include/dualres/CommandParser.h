@@ -203,10 +203,10 @@ void dualres::CommandParser<T>::show_usage() const {
 
 
 
-#include "GPMCommandParser.inl"
-#include "EstimRbfCommandParser.inl"
-#include "NeighborhoodCommandParser.inl"
-#include "FFTWWisdomCommandParser.inl"
+#include "dualres/impl/CommandParser/GPMCommandParser.inl"
+#include "dualres/impl/CommandParser/EstimRbfCommandParser.inl"
+#include "dualres/impl/CommandParser/NeighborhoodCommandParser.inl"
+#include "dualres/impl/CommandParser/FFTWWisdomCommandParser.inl"
 
 #endif  // _DUALRES_COMMAND_PARSER_
 

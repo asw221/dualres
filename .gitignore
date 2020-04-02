@@ -16,6 +16,7 @@ src/*~
 include/*~
 include/old
 include/dev
+.Rhistory
 
 # Ignore Mac specific files
 .DS_Store

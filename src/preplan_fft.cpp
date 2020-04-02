@@ -11,10 +11,10 @@
 #include <string>
 
 
-#include "CommandParser.h"
-#include "defines.h"
-#include "nifti_manipulation.h"
-#include "utilities.h"
+#include "dualres/CommandParser.h"
+#include "dualres/defines.h"
+#include "dualres/nifti_manipulation.h"
+#include "dualres/utilities.h"
 
 
 

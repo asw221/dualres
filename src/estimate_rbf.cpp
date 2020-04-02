@@ -5,8 +5,8 @@
 #include <nifti1_io.h>
 #include <vector>
 
-#include "CommandParser.h"
-#include "estimate_kernel_parameters.h"
+#include "dualres/CommandParser.h"
+#include "dualres/estimate_kernel_parameters.h"
 
 
 int main(int argc, char *argv[]) {

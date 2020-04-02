@@ -1,7 +1,7 @@
 
 #include <algorithm>
 #include <boost/filesystem.hpp>
-#include <Eigen/Core>
+// #include <Eigen/Core>
 #include <random>
 #include <string>
 #include <thread>
@@ -13,8 +13,6 @@
 
 
 namespace dualres {
-  
-  typedef Eigen::Matrix<float, 4, 4, Eigen::RowMajor> qform_type;
 
   
   enum class use_lambda_method { PROFILE, NATIVE, EXTENDED };
@@ -58,6 +56,8 @@ namespace dualres {
 // #include "data_types.inl"
 
 #endif  // _DUALRES_DEFINES_
+
+
 
 
 

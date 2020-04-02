@@ -119,7 +119,7 @@ namespace dualres {
 }  // namespace dualres
 
 
-#include "eigen_slicing.inl"
+#include "dualres/impl/eigen_slicing.inl"
 
 
 #endif  // _DUALRES_EIGEN_SLICING_

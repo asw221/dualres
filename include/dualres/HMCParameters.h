@@ -3,7 +3,7 @@
 #include <math.h>
 #include <random>
 
-#include "defines.h"
+#include "dualres/defines.h"
 
 
 #ifndef _DUALRES_HMC_PARAMETERS_
@@ -191,7 +191,7 @@ dualres::HMCParameters<RealType>::eps() const {
   if (_warmup)
     return static_cast<value_type>(_eps);
   else
-    return static_cast<value_type>(_eps * Uniform(dualres::rng()));
+    return static_cast<value_type>(_eps * Uniform(dualres::__internals::_RNG_));
 };
 
 
