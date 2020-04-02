@@ -15,6 +15,7 @@ test/*
 src/*~
 include/*~
 include/old
+include/dev
 
 # Ignore Mac specific files
 .DS_Store

@@ -18,6 +18,15 @@ link_directories(${dualres_SOURCE_DIR}/lib/nifti/lib)
 
 
 
+
+## --- clear_fftw_history --------------------------------------------
+add_executable(clear_fftw_history clear_fftw_history.cpp)
+target_link_libraries(clear_fftw_history Boost::filesystem)
+set_target_properties(clear_fftw_history PROPERTIES
+		RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
+
+
+
 ## --- estimate_rbf --------------------------------------------------
 add_executable(estimate_rbf estimate_rbf.cpp)
 target_link_libraries(estimate_rbf Boost::filesystem Eigen3::Eigen

@@ -1,35 +1,58 @@
 
 #include <boost/filesystem.hpp>
+#include <fstream>
 #include <iomanip>
 #include <iostream>
+#include <string>
 
 #include "defines.h"
 
 
-int dualres::utilities::set_number_of_threads(const unsigned int threads) {
-  if (threads > 0 && threads <= dualres::internals::_MAX_THREADS_) {
-    dualres::internals::_N_THREADS_ = (int)threads;
+bool dualres::initialize_temporary_directory() {
+  boost::filesystem::create_directory(dualres::__internals::_TEMP_DIR_);
+  return boost::filesystem::is_directory(dualres::__internals::_TEMP_DIR_);
+};
+
+
+dualres::__internals::path dualres::fftw_wisdom_file() {
+  return dualres::__internals::_FFTW_WISDOM_FILE_;
+};
+
+
+dualres::__internals::rng_type& dualres::rng() {
+  return dualres::__internals::_RNG_;
+};
+
+
+int dualres::set_number_of_threads(const unsigned int threads) {
+  if (threads > 0 && threads <= dualres::__internals::_MAX_THREADS_) {
+    dualres::__internals::_N_THREADS_ = (int)threads;
   }
-  return dualres::internals::_N_THREADS_;
+  return dualres::__internals::_N_THREADS_;
 };
 
 
-int dualres::utilities::threads() {
-  return dualres::internals::_N_THREADS_;
+int dualres::threads() {
+  return dualres::__internals::_N_THREADS_;
 };
   
 
-void dualres::utilities::set_seed(const unsigned int seed) {
-  dualres::internals::_RNG_.seed(seed);
+void dualres::set_seed(const unsigned int seed) {
+  dualres::__internals::_RNG_.seed(seed);
 };
 
   
-bool dualres::utilities::initialize_temporary_directory() {
-  boost::filesystem::create_directory(dualres::internals::_TEMP_DIR_);
-  return boost::filesystem::is_directory(dualres::internals::_TEMP_DIR_);
+
+
+
+bool dualres::utilities::file_exists(const std::string &fname) {
+  std::ifstream ifs(fname.c_str());
+  if (ifs.is_open()) {
+    ifs.close();
+    return true;
+  }
+  return false;
 };
-
-
 
 
 

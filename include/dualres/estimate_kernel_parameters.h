@@ -6,9 +6,9 @@
 #include <nlopt.hpp>
 #include <vector>
 
-#include "defines.h"
-#include "nifti_manipulation.h"
-#include "perturbation_matrix.h"
+#include "dualres/defines.h"
+#include "dualres/nifti_manipulation.h"
+#include "dualres/perturbation_matrix.h"
 
 
 #ifndef _DUALRES_ESTIMATE_KERNEL_PARAMETERS_

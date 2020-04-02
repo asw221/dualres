@@ -8,6 +8,7 @@
 #include <vector>
 
 #include "defines.h"
+#include "eigen_slicing.h"
 #include "kernels.h"
 #include "nifti_manipulation.h"
 #include "utilities.h"
@@ -139,7 +140,7 @@ namespace dualres {
   
 
   template< typename Scalar = float >
-  dualres::kriging_matrix_data<float> get_sparse_kriging_array_data(
+  dualres::kriging_matrix_data<float> get_sparse_kriging_matrix_data(
     const nifti_image* const high_res,
     const nifti_image* const std_res,
     const std::vector<float> &rbf_params,
@@ -288,7 +289,7 @@ namespace dualres {
       }
       else {
 	k_prime = Eigen::Map<Eigen::VectorXf>(kernel_distances.data(), kernel_distances.size());
-	_w_ = dualres::utilities::eigen_select_symmetric(K, perturbation_index)
+	_w_ = dualres::eigen_select_symmetric(K, perturbation_index)
 	  .colPivHouseholderQr().solve(k_prime);
 	// _w_ = dualres::nullary_index(K,
         //   Eigen::Map<Eigen::VectorXi>(perturbation_index.data(), perturbation_index.size()),

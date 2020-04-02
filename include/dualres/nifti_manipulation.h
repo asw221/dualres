@@ -4,8 +4,8 @@
 #include <string>
 #include <vector>
 
-#include "defines.h"
-#include "utilities.h"
+#include "dualres/defines.h"
+#include "dualres/utilities.h"
 
 
 #ifndef _DUALRES_NIFTI_MANIPULATION_

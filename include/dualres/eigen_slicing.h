@@ -1,15 +1,7 @@
 
 #include <Eigen/Core>
-#include <fstream>
-#include <string>
 #include <vector>
 
-
-#include "defines.h"
-
-
-#ifndef _DUALRES_UTILITIES_
-#define _DUALRES_UTILITIES_
 
 
 
@@ -19,46 +11,13 @@
 
 
 
+#ifndef _DUALRES_EIGEN_SLICING_
+#define _DUALRES_EIGEN_SLICING_
+
+
 namespace dualres {
 
-
-  namespace utilities {
-
-    bool initialize_temporary_directory();
-    
-    int set_number_of_threads(const unsigned int threads);
-    int threads();
-  
-    void set_seed(const unsigned int seed);
-
-  
-
-
-
-    class progress_bar {
-    public:
-      progress_bar(unsigned int max_val);
       
-      void finish();
-      void operator++();
-      void operator++(int);
-      void value(unsigned int value);
-
-      template< typename OStream >
-      friend OStream& operator<<(OStream& os, const progress_bar& pb);
-      
-    private:
-      bool _active;
-      char __;
-      unsigned int _max_val;
-      unsigned int _print_width;
-      unsigned int _bar_print_width;
-      unsigned int _value;
-    };
-
-
-    
-
     template< typename MatrixType >
     MatrixType eigen_select(
       const MatrixType &M,
@@ -69,9 +28,6 @@ namespace dualres {
 
     template< typename MatrixType >
     MatrixType eigen_select_symmetric(const MatrixType &M, const std::vector<int> &indices);
-
-
-
 
 
 
@@ -133,32 +89,12 @@ namespace dualres {
 
 
 
-    bool file_exists(const std::string &fname) {
-      std::ifstream ifs(fname.c_str());
-      if (ifs.is_open()) {
-	ifs.close();
-	return true;
-      }
-      return false;
-    };
-
-
-    
-    
-  }  // namespace utilities ------------------------------------------
-
-
-
-
   
-
-
-
     
   template< class ArgType, class RowIndexType, class ColIndexType >
   Eigen::CwiseNullaryOp<
-    dualres::utilities::matrix_indexing_functor<ArgType, RowIndexType, ColIndexType>,
-    typename dualres::utilities::matrix_indexing_functor<
+    dualres::matrix_indexing_functor<ArgType, RowIndexType, ColIndexType>,
+    typename dualres::matrix_indexing_functor<
       ArgType, RowIndexType, ColIndexType>::MatrixType>
   nullary_index(
     const Eigen::MatrixBase<ArgType> &arg,
@@ -170,8 +106,8 @@ namespace dualres {
 
   template< class ArgType, class IndexType >
   Eigen::CwiseNullaryOp<
-    dualres::utilities::vector_indexing_functor<ArgType, IndexType>,
-    typename dualres::utilities::vector_indexing_functor<ArgType, IndexType>::VectorType >
+    dualres::vector_indexing_functor<ArgType, IndexType>,
+    typename dualres::vector_indexing_functor<ArgType, IndexType>::VectorType >
   nullary_index(
     const Eigen::MatrixBase<ArgType> &arg,
     const IndexType &row_indices
@@ -179,12 +115,12 @@ namespace dualres {
 
 
 
-
   
-}  // namespace dualres ----------------------------------------------
+}  // namespace dualres
 
 
-#include "utilities.inl"
-#include "eigen_indexing.inl"
+#include "eigen_slicing.inl"
 
-#endif  // _DUALRES_UTILITIES_
+
+#endif  // _DUALRES_EIGEN_SLICING_
+

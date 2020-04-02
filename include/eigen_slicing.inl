@@ -6,15 +6,15 @@
 
 template< class ArgType, class RowIndexType, class ColIndexType >
 Eigen::CwiseNullaryOp<
-  dualres::utilities::matrix_indexing_functor<ArgType, RowIndexType, ColIndexType>,
-  typename dualres::utilities::matrix_indexing_functor<
+  dualres::matrix_indexing_functor<ArgType, RowIndexType, ColIndexType>,
+  typename dualres::matrix_indexing_functor<
     ArgType, RowIndexType, ColIndexType>::MatrixType>
 dualres::nullary_index(
   const Eigen::MatrixBase<ArgType> &arg,
   const RowIndexType &row_indices,
   const ColIndexType& col_indices
 ) {
-  typedef dualres::utilities::matrix_indexing_functor<
+  typedef dualres::matrix_indexing_functor<
     ArgType, RowIndexType, ColIndexType> Func;
   typedef typename Func::MatrixType MatrixType;
   return MatrixType::NullaryExpr(
@@ -27,13 +27,13 @@ dualres::nullary_index(
 
 template< class ArgType, class IndexType >
 Eigen::CwiseNullaryOp<
-  dualres::utilities::vector_indexing_functor<ArgType, IndexType>,
-  typename dualres::utilities::vector_indexing_functor<ArgType, IndexType>::VectorType >
+  dualres::vector_indexing_functor<ArgType, IndexType>,
+  typename dualres::vector_indexing_functor<ArgType, IndexType>::VectorType >
 dualres::nullary_index(
   const Eigen::MatrixBase<ArgType> &arg,
   const IndexType &row_indices
 ) {
-  typedef dualres::utilities::vector_indexing_functor<ArgType, IndexType> Func;
+  typedef dualres::vector_indexing_functor<ArgType, IndexType> Func;
   typedef typename Func::VectorType VectorType;
   return VectorType::NullaryExpr(row_indices.size(), Func(arg.derived(), row_indices));
 };
@@ -44,7 +44,7 @@ dualres::nullary_index(
 
 
 template< typename MatrixType >
-MatrixType dualres::utilities::eigen_select(
+MatrixType dualres::eigen_select(
   const MatrixType &M,
   const std::vector<int> &row_indices,
   const std::vector<int> &col_indices
@@ -65,7 +65,7 @@ MatrixType dualres::utilities::eigen_select(
 
 
 template< typename MatrixType >
-MatrixType dualres::utilities::eigen_select_symmetric(
+MatrixType dualres::eigen_select_symmetric(
   const MatrixType &M, const std::vector<int> &indices
 ) {
   MatrixType Sub(indices.size(), indices.size());

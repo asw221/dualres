@@ -5,16 +5,16 @@
 #include <nifti1_io.h>
 #include <vector>
 
-#include "CommandParser.h"
-#include "defines.h"
-#include "estimate_kernel_parameters.h"
-#include "gaussian_process_model.h"
-#include "HMCParameters.h"
-#include "kernels.h"
-#include "kriging_matrix.h"
-#include "MultiResData.h"
-#include "MultiResParameters.h"
-#include "nifti_manipulation.h"
+#include "dualres/CommandParser.h"
+#include "dualres/defines.h"
+#include "dualres/estimate_kernel_parameters.h"
+#include "dualres/gaussian_process_model.h"
+#include "dualres/HMCParameters.h"
+#include "dualres/kernels.h"
+#include "dualres/kriging_matrix.h"
+#include "dualres/MultiResData.h"
+#include "dualres/MultiResParameters.h"
+#include "dualres/nifti_manipulation.h"
 
 
 
@@ -44,19 +44,15 @@ int main(int argc, char *argv[]) {
   else if (inputs.help_invoked())
     return 0;
 
+  
+  dualres::set_seed(inputs.seed());
 
   dualres::set_number_of_threads(inputs.threads());
-  Eigen::setNbThreads(6);
-  fftw_plan_with_nthreads(dualres::internals::_N_THREADS_);
-  
-  
-  if (!inputs.highres_file().empty())
-    std::cout << "High-resolution file: " << inputs.highres_file() << std::endl;
-  if (!inputs.stdres_file().empty())
-    std::cout << "Standard-resolution file: " << inputs.stdres_file() << std::endl;
+  omp_set_num_threads(dualres::threads());
+  Eigen::setNbThreads(dualres::threads());
+  fftwf_plan_with_nthreads(dualres::threads());
+  std::cout << "[dualres running on " << dualres::threads() << " cores]" << std::endl;
 
-
-  dualres::set_seed(inputs.seed());
 
   scalar_type neighborhood = inputs.neighborhood();
   // int n_datasets = 1;
@@ -66,7 +62,7 @@ int main(int argc, char *argv[]) {
   nifti_image* _high_res_ = nifti_image_read(inputs.highres_file().c_str(), 1);
   nifti_image* _std_res_;
 
-  if (!inputs.stdres_file().empty()) {
+  if (_standard_resolution_available) {
     _std_res_ = nifti_image_read(inputs.stdres_file().c_str(), 1);
     
     if (!dualres::same_data_types(_high_res_, _std_res_)) {
@@ -91,9 +87,20 @@ int main(int argc, char *argv[]) {
   // If the (mm) neighborhood is not given, compute it from the kernel
   // parameters assuming sparsity after a cuttoff level of 0.1
   if (neighborhood <= 0) {
-    neighborhood = dualres::kernels::rbf_inverse(
-      (scalar_type)0.1, kernel_params[1], kernel_params[2], kernel_params[0]);
+    // neighborhood = dualres::kernels::rbf_inverse(
+    //   (scalar_type)0.1, kernel_params[1], kernel_params[2], kernel_params[0]);
+    neighborhood = (scalar_type)dualres::voxel_dimensions(
+      dualres::qform_matrix(_high_res_)).array().maxCoeff();
   }
+  
+
+
+  
+  if (!inputs.highres_file().empty())
+    std::cout << "High-resolution file: " << inputs.highres_file() << std::endl;
+  if (!inputs.stdres_file().empty())
+    std::cout << "Standard-resolution file: " << inputs.stdres_file() << std::endl;
+
 
 
   // "Body:"
@@ -105,21 +112,19 @@ int main(int argc, char *argv[]) {
 
 
   std::vector<scalar_type> __Yh = dualres::get_nonzero_data<scalar_type>(_high_res_);
+  std::vector<scalar_type> __Ys;
   dualres::MultiResData<scalar_type> _data_;
-  _data_.push_back_data(__Yh.data(), __Yh.size());
   
-  if (!inputs.stdres_file().empty()) {
-    _data_.push_back_data(dualres::get_nonzero_data_array<scalar_type>(_std_res_));
-    // push_back_weight
-    dualres::kriging_matrix_data<scalar_type> kmd =
-      dualres::get_sparse_kriging_array_data<scalar_type>(
-        _high_res_, _std_res_, kernel_params, neighborhood
-    );
-    _data_.push_back_weight(kmd);
+  if (!_standard_resolution_available) {
+    _data_ = dualres::MultiResData<scalar_type>(_high_res_);
+  }
+  else {
+    _data_ = dualres::MultiResData<scalar_type>(
+      _high_res_, _std_res_, kernel_params, neighborhood);
   }
 
   
-  std::cout << "Constructing circulant base and initializing parameters... "
+  std::cout << "Constructing circulant base and initializing parameters...\n"
 	    << std::flush;
   
   dualres::MultiResParameters<scalar_type> _theta_(
@@ -147,15 +152,15 @@ int main(int argc, char *argv[]) {
 	    << _theta_.mu().sum()
 	    << std::endl;
 
-  if (!inputs.stdres_file().empty()) {
+  if (_standard_resolution_available) {
     std::cout << "Kriging matrix has dimension: ("
-	      << _data_.W(0).rows() << ", " << _data_.W(0).cols() << ")"
+	      << _data_.W().rows() << ", " << _data_.W().cols() << ")"
 	      << std::endl;
   }
 
 
-  std::cout << "(Extended) size of Y's: " << _data_.Y(0).size() << ", "
-	    << _data_.Y(1).size()
+  std::cout << "(Extended) size of Y's: " << _data_.Yh().size() << ", "
+	    << _data_.Ys().size()
 	    << std::endl;
   
   // dualres::fit_dualres_gaussian_process_model<scalar_type>(_data_, _theta_, _hmc_);
@@ -163,8 +168,8 @@ int main(int argc, char *argv[]) {
 
   // Finish by calling  nifti_image_free()
   nifti_image_free(_high_res_);
-  nifti_image_free(_std_res_);
-  // fftw_cleanup_threads();
+  if (_standard_resolution_available)  nifti_image_free(_std_res_);
+  fftwf_cleanup_threads();
 }
 
 
@@ -197,7 +202,7 @@ bool compute_kernel_parameters_if_needed(
     }
     else {
       for (int i = 0; i < kernel_params_dtemp.size(); i++)
-	kernel_params.push_back((scalar_type)kernel_params_dtemp[i]);
+	theta.push_back((T)kernel_params_dtemp[i]);
       std::cout << "Done!" << std::endl;
     }
   }

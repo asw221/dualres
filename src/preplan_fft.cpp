@@ -32,11 +32,11 @@ int main (int argc, char* argv[]) {
   else if (inputs.help_invoked())
     return 0;
 
-  dualres::utilities::initialize_temporary_directory();
-  dualres::utilities::set_number_of_threads(inputs.threads());
+  dualres::initialize_temporary_directory();
+  dualres::set_number_of_threads(inputs.threads());
 
-  fftwf_plan_with_nthreads(dualres::utilities::threads());
-  std::cout << "[FFTW running on " << dualres::utilities::threads()
+  fftwf_plan_with_nthreads(dualres::threads());
+  std::cout << "[FFTW running on " << dualres::threads()
 	    << " cores]\n";
 
   
@@ -69,8 +69,8 @@ int main (int argc, char* argv[]) {
 
 
   // Import any existing wisdom
-  if (dualres::utilities::file_exists(dualres::internals::_FFTW_WISDOM_FILE_.string()))
-    fftwf_import_wisdom_from_filename(dualres::internals::_FFTW_WISDOM_FILE_.c_str());
+  if (dualres::utilities::file_exists(dualres::fftw_wisdom_file().string()))
+    fftwf_import_wisdom_from_filename(dualres::fftw_wisdom_file().c_str());
 
   
   // Adopt requested planner flag (patient/exhaustive search)
@@ -137,12 +137,12 @@ int main (int argc, char* argv[]) {
 
 
   // Wisdom export
-  int export_status = fftwf_export_wisdom_to_filename(dualres::internals::_FFTW_WISDOM_FILE_.c_str());
+  int export_status = fftwf_export_wisdom_to_filename(dualres::fftw_wisdom_file().c_str());
   if (export_status == 0) {
     std::cerr << "\nWarning: wisdom file not written!" << std::endl;
   }
   else {
-    std::cout << "Wisdom earned: " << dualres::internals::_FFTW_WISDOM_FILE_.string()
+    std::cout << "Wisdom earned: " << dualres::fftw_wisdom_file().string()
 	      << std::endl;
   }
 

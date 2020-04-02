@@ -191,7 +191,7 @@ dualres::HMCParameters<RealType>::eps() const {
   if (_warmup)
     return static_cast<value_type>(_eps);
   else
-    return static_cast<value_type>(_eps * Uniform(dualres::internals::_RNG_));
+    return static_cast<value_type>(_eps * Uniform(dualres::rng()));
 };
 
 

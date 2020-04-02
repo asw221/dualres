@@ -6,11 +6,11 @@
 #include <vector>
 
 
-#include "defines.h"
-#include "HMCParameters.h"
-#include "MultiResData.h"
-#include "MultiResParameters.h"
-#include "utilities.h"
+#include "dualres/defines.h"
+#include "dualres/HMCParameters.h"
+#include "dualres/MultiResData.h"
+#include "dualres/MultiResParameters.h"
+#include "dualres/utilities.h"
 
 
 
@@ -27,19 +27,19 @@ namespace dualres {
   class mcmc_output {
   public:
     typedef T value_type;
-    typedef typename Eigen::Vector<value_type, Eigen::Dynamic> VectorType;
+    typedef typename Eigen::Matrix<value_type, Eigen::Dynamic, 1> VectorType;
     
     std::vector<VectorType> mu;
     std::vector<std::vector<T> > sigma;
     std::vector<T> log_posterior;
     T sampling_time;
     
-    mcmc_output(const int n) {
-      if (n <= 0)
+    mcmc_output(const int nsave) {
+      if (nsave <= 0)
 	throw std::domain_error("Must reserve space for > 0 MCMC samples");
-      mu.reserve(n);
-      sigma.reserve(n);
-      log_posterior.reserve(n);
+      mu.reserve(nsave);
+      sigma.reserve(nsave);
+      log_posterior.reserve(nsave);
     };
   };
 
@@ -55,6 +55,7 @@ namespace dualres {
   ) {
     T mh_rate;
     int save_count = 0;
+    Eigen::Matrix<T, Eigen::Dynamic, 1> _mu_ = _theta_.mu() * 0;
     std::vector<T> _log_posterior_(_hmc_.n_save());
 
     //
@@ -98,12 +99,11 @@ namespace dualres {
     std::cout << "Metropolis-Hastings rate was "
 	      << (_hmc_.metropolis_hastings_rate() * 100)
 	      << "%" << std::endl;
-    _mu_.host(_mu_host_.data());
 
     //
     csv << "mu";
-    for (int i = 0; i < _mu_host_.size(); i++)
-      csv << "\n" <<_mu_host_[i];
+    // for (int i = 0; i < _mu_host_.size(); i++)
+    //   csv << "\n" <<_mu_host_[i];
     csv.close();
     // return _mu_host_;
   };

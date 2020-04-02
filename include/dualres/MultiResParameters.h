@@ -12,10 +12,11 @@
 #include <random>
 #include <vector>
 
-#include "circulant_base.h"
-#include "defines.h"
-#include "MultiResData2.h"
-#include "utilities.h"
+#include "dualres/circulant_base.h"
+#include "dualres/eigen_slicing.h"
+#include "dualres/defines.h"
+#include "dualres/MultiResData.h"
+#include "dualres/utilities.h"
 
 
 
@@ -33,9 +34,9 @@ namespace dualres {
     typedef T scalar_type;
     typedef typename std::complex<T> complex_type;
     typedef typename Eigen::Array<scalar_type, Eigen::Dynamic, 1> ArrayType;
-    typedef typename Eigen::Vector<scalar_type, Eigen::Dynamic, 1> VectorType;
-    typedef typename Eigen::Vector<complex_type, Eigen::Dynamic, 1> ComplexArrayType;
-    typedef typename Eigen::Vector<complex_type, Eigen::Dynamic, 1> ComplexVectorType;
+    typedef typename Eigen::Matrix<scalar_type, Eigen::Dynamic, 1> VectorType;
+    typedef typename Eigen::Array<complex_type, Eigen::Dynamic, 1> ComplexArrayType;
+    typedef typename Eigen::Matrix<complex_type, Eigen::Dynamic, 1> ComplexVectorType;
     
 
     MultiResParameters(
@@ -47,10 +48,6 @@ namespace dualres {
     );
 
     ~MultiResParameters();
-
-
-    
-    void print_test();
     
     scalar_type update(
       const typename dualres::MultiResData<scalar_type> &data,
@@ -58,15 +55,15 @@ namespace dualres {
       const int L = 10
     );
     
-    const typename ComplexVectorType& gradient(
+    const ComplexVectorType& gradient(
       const typename dualres::MultiResData<scalar_type> &data
     );
-    typename VectorType mu() const;
+    const VectorType& mu() const;
     
     // const af::array& lambda() const;
-    const typename ComplexArrayType& lambda() const;
-    const typename ComplexArrayType& lambda_inv() const;
-    const std::vector<int>& indices() const;
+    const ComplexArrayType& lambda() const;
+    const ComplexArrayType& lambda_inv() const;
+    const Eigen::VectorXi& data_indices() const;
     
     scalar_type log_prior() const;  // returns array of dim = 1
     scalar_type log_likelihood(const typename dualres::MultiResData<scalar_type> &data);
@@ -77,6 +74,8 @@ namespace dualres {
 
     
   private:
+    int _n_datasets;
+    
     fftwf_plan __forward_fft_plan;
     fftwf_plan __backward_fft_plan;
     
@@ -92,24 +91,25 @@ namespace dualres {
     VectorType _real_mu;
     VectorType _real_sub_grad;
     VectorType _Y_star;
-
-
-    Eigen::VectorXi __lambda_grid_indices;
     
-    std::vector<int> _negative_eigen_values;
-
-    scalar_type _total_energy;
-    scalar_type _initial_energy;
-    
-    int _n_datasets;
 
     Eigen::Vector3i __image_grid_dims;  // dimensions of bounded image
     Eigen::Vector3i __lambda_grid_dims;
+    
+    Eigen::VectorXi __lambda_grid_indices;
 
+    std::vector<int> _negative_eigen_values;
+    
+
+    scalar_type _initial_energy;
+    scalar_type _tau_sq_inv;
+    scalar_type _total_energy;
+    
+    typename std::normal_distribution<scalar_type> __Standard_Gaussian;
+    
     typename std::vector<scalar_type> _theta;
     typename std::vector<scalar_type> _sigma_sq_inv;
 
-    typename std::normal_distribution<scalar_type> __Standard_Gaussian;
 
     const ComplexArrayType& _compute_gradient(
       const typename dualres::MultiResData<scalar_type> &data,
@@ -121,6 +121,7 @@ namespace dualres {
     void _initialize_sigma(const scalar_type shape = 1, const scalar_type rate = 1);
     void _sample_momentum();
     void _update_sigma_sq_inv(const typename dualres::MultiResData<scalar_type> &data);
+    void _update_tau_sq_inv();
 
     void _low_rank_adjust(ComplexArrayType &A) const;
     
@@ -186,7 +187,7 @@ dualres::MultiResParameters<T>::MultiResParameters(
     //  - Eigen does not implement a log2() method
     __lambda_grid_dims = Eigen::pow(2.0,
       (__lambda_grid_dims.cast<double>().array().log() / std::log(2.0)).ceil())
-      .matrix().cast<int>().eval();
+      .matrix().template cast<int>().eval();
   }
 
   
@@ -202,8 +203,8 @@ dualres::MultiResParameters<T>::MultiResParameters(
   __temp_product = _lambda;
 
   // In-place transformations:
-  if (dualres::utilities::file_exists(dualres::internals::_FFTW_WISDOM_FILE_.string()))
-    fftwf_import_wisdom_from_filename(dualres::internals::_FFTW_WISDOM_FILE_.c_str());
+  if (dualres::utilities::file_exists(dualres::fftw_wisdom_file().string()))
+    fftwf_import_wisdom_from_filename(dualres::fftw_wisdom_file().c_str());
   
   std::cout << "Selecting forward DFT algorithm... " << std::flush;
   __forward_fft_plan = fftwf_plan_dft_3d(
@@ -223,28 +224,30 @@ dualres::MultiResParameters<T>::MultiResParameters(
   );
   std::cout << "Done!" << std::endl;
 
-  fftwf_export_wisdom_to_filename(dualres::internals::_FFTW_WISDOM_FILE_.c_str());
+  fftwf_export_wisdom_to_filename(dualres::fftw_wisdom_file().c_str());
   
 
   // Now compute _lambda
   _lambda = dualres::circulant_base_3d<scalar_type>(__image_grid_dims, Qform_y0,
-    compute_lambda_on_extended_grid).cast<complex_type>();
+    compute_lambda_on_extended_grid).template cast<complex_type>();
   for (int i = 0; i < _lambda.size(); i++) {
-    _lambda[i][0] = dualres::kernels::rbf(_lambda[i], _theta[1], _theta[2], _theta[0]);
+    _lambda[i] = complex_type(dualres::kernels::rbf(
+      _lambda[i].real(), _theta[1], _theta[2], _theta[0]), 0);
   }
   fftwf_execute(__forward_fft_plan);
+  _tau_sq_inv = _theta[0];
 
   // Get indices where real parts of eigen values are < 0
   for (int i = 0; i < _lambda.size(); i++) {
     if (_lambda[i].real() < 0)
-      __negative_eigen_values.push_back(i);
+      _negative_eigen_values.push_back(i);
   }
     
 
-  std::cout << (_lambda.size() - __negative_eigen-values.size())
+  std::cout << (_lambda.size() - _negative_eigen_values.size())
 	    << " eigen values have real-part > 0  ("
 	    << std::setprecision(2) << std::fixed
-	    << ( (1.0 - (double)__negative_eigen-values.size() / _lambda.size())
+	    << ( (1.0 - (double)_negative_eigen_values.size() / _lambda.size())
 		 * 100 ) << "%)"
 	    << std::endl;
   
@@ -266,8 +269,8 @@ template< typename T >
 void dualres::MultiResParameters<T>::_low_rank_adjust(
   typename dualres::MultiResParameters<T>::ComplexArrayType &A
 ) const {
-  for (std::vector<int>::const_iterator it = __negative_eigen_values.cbegin();
-       it != __negative_eigen_values.cend(); ++it) {
+  for (std::vector<int>::const_iterator it = _negative_eigen_values.cbegin();
+       it != _negative_eigen_values.cend(); ++it) {
     A[*it] = complex_type(0, 0);
   }
 };
@@ -301,12 +304,12 @@ dualres::MultiResParameters<T>::_compute_gradient(
   _real_mu = dualres::nullary_index(mu_star.matrix().real(), __lambda_grid_indices);
   // _grad = -af::dft(af::idft(mu_star) / _lambda * _positive_eigen_values / mu_star.elements());
   if (_n_datasets == 1) {
-    _real_sub_grad = _sigma_sq_inv[0] * (data.Y(0) - _real_mu);
+    _real_sub_grad = _sigma_sq_inv[0] * (data.Yh() - _real_mu);
   }
   else if (_n_datasets == 2) {
-    _real_sub_grad = _sigma_sq_inv[0] * (data.Y(0) - _real_mu) +
-      _sigma_sq_inv[1] * ((data.Y(1) - (data.W(0) * _real_mu)).transpose() *
-			  data.W(0)).transpose();
+    _real_sub_grad = _sigma_sq_inv[0] * (data.Yh() - _real_mu) +
+      _sigma_sq_inv[1] * ((data.Ys() - (data.W() * _real_mu)).transpose() *
+			  data.W()).transpose();
   }
   else {
     throw std::logic_error("Gradient only implemented for single or dual resolution");
@@ -321,7 +324,7 @@ dualres::MultiResParameters<T>::_compute_gradient(
 
 
 template< typename T >
-const typename dualres::MultiResParameters<T>::ComplexArrayType&
+const typename dualres::MultiResParameters<T>::ComplexVectorType&
 dualres::MultiResParameters<T>::gradient(
   const typename dualres::MultiResData<
     typename dualres::MultiResParameters<T>::scalar_type> &data
@@ -341,7 +344,7 @@ dualres::MultiResParameters<T>::mu() const {
 
 
 template< typename T >
-const const typename dualres::MultiResParameters<T>::ComplexArrayType&
+const typename dualres::MultiResParameters<T>::ComplexArrayType&
 dualres::MultiResParameters<T>::lambda() const {
   return _lambda;
 };
@@ -366,7 +369,7 @@ const Eigen::VectorXi& dualres::MultiResParameters<T>::data_indices() const {
 template< typename T >
 typename dualres::MultiResParameters<T>::scalar_type
 dualres::MultiResParameters<T>::_log_prior(
-  const typename dualres::MultiResParameters<T>::ComplexArrayType& &mu_star
+  typename dualres::MultiResParameters<T>::ComplexArrayType &mu_star
 ) const {
   // __Fh_x = af::idft(mu_star) / std::sqrt((scalar_type)mu_star.elements());
   // scalar_type __lp = -0.5 *
@@ -379,8 +382,10 @@ dualres::MultiResParameters<T>::_log_prior(
   );
   // __temp_product /= _lambda.size() * _lambda;
   _low_rank_adjust(__temp_product);
+
+  int i;
 #pragma omp parallel for shared(__temp_product, _lambda) private(i) reduction(+ : __lp)
-  for (int i = 0; i < __temp_product.size(); i++)
+  for (i = 0; i < __temp_product.size(); i++)
     __lp += std::conj(__temp_product[i]) * __temp_product[i] / (_lambda[i] * _lambda.size());
   return __lp.real();
 };
@@ -409,9 +414,9 @@ dualres::MultiResParameters<T>::_log_likelihood(
 #endif
   scalar_type __ll(0);
   _real_mu = dualres::nullary_index(mu_star.matrix().real(), __lambda_grid_indices);
-  __ll = -0.5 * _sigma_sq_inv[0] * (data.Y(0) - _real_mu).squaredNorm();
+  __ll = -0.5 * _sigma_sq_inv[0] * (data.Yh() - _real_mu).squaredNorm();
   if (_n_datasets == 2) {
-    __ll += -0.5 * sigma_sq_inv[1] * (data.Y(1) - (W * _real_mu)).squaredNorm();
+    __ll += -0.5 * _sigma_sq_inv[1] * (data.Ys() - (data.W() * _real_mu)).squaredNorm();
   }
   else if (_n_datasets > 2) {
     throw std::logic_error("Likelihood only implemented for single or dual resolution");
@@ -467,8 +472,10 @@ dualres::MultiResParameters<T>::_potential_energy() const {
     reinterpret_cast<fftwf_complex*>(_momentum.data()),
     reinterpret_cast<fftwf_complex*>(__temp_product.data())
   );
+
+  int i;
 #pragma omp parallel for shared(__temp_product, _lambda_mass) private(i) reduction(+ : __pe)
-  for (int i = 0; i < __temp_product.size(); i++)
+  for (i = 0; i < __temp_product.size(); i++)
     __pe += std::conj(__temp_product[i]) * _lambda_mass[i] * __temp_product[i];
   return -0.5 * __pe.real();
 };
@@ -554,14 +561,15 @@ dualres::MultiResParameters<T>::update(
   proposed_energy = _log_posterior(data, _mu_star) + _potential_energy();
   R = std::exp(proposed_energy - _initial_energy);
   if (isnan(R))  R = 0;
-  if (Uniform(dualres::internals::_RNG_) < R) {
+  if (Uniform(dualres::rng()) < R) {
     _mu = _mu_star;
     _total_energy = proposed_energy;
   }
-  // __real_mu = af::moddims(af::real(_mu), _lDim);
+  // _real_mu = af::moddims(af::real(_mu), _lDim);
   _real_mu = dualres::nullary_index(_mu.matrix().real(), __lambda_grid_indices);
-  // ^^ _real_mu must be set before _update_sigma_sq_inv()
+  // ^^ _real_mu must be set before _update_sigma_sq_inv(), _update_tau_sq_inv()
   _update_sigma_sq_inv(data);
+  // _update_tau_sq_inv();
   return std::min((scalar_type)1.0, R);
 };
 
@@ -588,19 +596,19 @@ void dualres::MultiResParameters<T>::_initialize_mu(
   // _mu = af::constant(0, _lambda.dims(), _ctype);
   _mu = ComplexArrayType(_lambda.size());
   for (int i = 0; i < _mu.size(); i++) {
-    _mu[i] = complex_type(__Standard_Gaussian(dualres::internals::_RNG_),
-			  __Standard_Gaussian(dualres::internals::_RNG_));
+    _mu[i] = complex_type(__Standard_Gaussian(dualres::rng()),
+			  __Standard_Gaussian(dualres::rng()));
   }
-  fftwf_execute_dft(__backward_fft_plan,
-    reinterpret_cast<fftwf_complex*>(_mu.data()),
-    reinterpret_cast<fftwf_complex*>(_mu.data())
-  );
-  _mu *= _lambda.sqrt() / (k * _mu.size());
-  _low_rank_adjust(_mu);
-  fftwf_execute_dft(__forward_fft_plan,
-    reinterpret_cast<fftwf_complex*>(_mu.data()),
-    reinterpret_cast<fftwf_complex*>(_mu.data())
-  );
+  // fftwf_execute_dft(__backward_fft_plan,
+  //   reinterpret_cast<fftwf_complex*>(_mu.data()),
+  //   reinterpret_cast<fftwf_complex*>(_mu.data())
+  // );
+  // _mu *= _lambda.sqrt() / (k * _mu.size());
+  // _low_rank_adjust(_mu);
+  // fftwf_execute_dft(__forward_fft_plan,
+  //   reinterpret_cast<fftwf_complex*>(_mu.data()),
+  //   reinterpret_cast<fftwf_complex*>(_mu.data())
+  // );
   _real_mu = dualres::nullary_index(_mu.matrix().real(), __lambda_grid_indices);
 };
 
@@ -618,9 +626,9 @@ void dualres::MultiResParameters<T>::_initialize_sigma(
   std::gamma_distribution<scalar_type> Gamma(shape, 1 / rate);
   std::uniform_real_distribution<scalar_type> Uniform(0, 1);
   _sigma_sq_inv.resize(_n_datasets);
-  _sigma_sq_inv[0] = Gamma(dualres::internals::_RNG_);
+  _sigma_sq_inv[0] = Gamma(dualres::rng());
   for (int i = 1; i < _n_datasets; i++)
-    _sigma_sq_inv[i] = _sigma_sq_inv[0] / Uniform(dualres::internals::_RNG_);
+    _sigma_sq_inv[i] = _sigma_sq_inv[0] / Uniform(dualres::rng());
 };
 
 
@@ -630,8 +638,8 @@ template< typename T >
 void dualres::MultiResParameters<T>::_sample_momentum() {
   _initial_energy = 0;
   for (int i = 0; i < _momentum.size(); i++) {
-    _momentum[i] = complex_type(__Standard_Gaussian(dualres::internals::_RNG_),
-				__Standard_Gaussian(dualres::internals::_RNG_));
+    _momentum[i] = complex_type(__Standard_Gaussian(dualres::rng()),
+				__Standard_Gaussian(dualres::rng()));
     _initial_energy += (std::conj(_momentum[i]) * _momentum[i]).real();
   }
   _initial_energy *= -0.5;
@@ -655,18 +663,18 @@ void dualres::MultiResParameters<T>::_update_sigma_sq_inv(
   const typename dualres::MultiResData<
     typename dualres::MultiResParameters<T>::scalar_type> &data
 ) {
-  scalar_type shape = 0.5 * data.Y(0).size() + 1;
-  scalar_type rate = 0.5 * (data.Y(0) - __real_mu).squaredNorm();
+  scalar_type shape = 0.5 * data.Yh().size() + 1;
+  scalar_type rate = 0.5 * (data.Yh() - _real_mu).squaredNorm();
   // New update scheme: just sample _sigma_sq_inv's from gamma's w/out worrying
   // about truncation
   std::gamma_distribution<scalar_type> Gamma(shape, 1 / rate);
-  _sigma_sq_inv[0] = Gamma(dualres::internals::_RNG_);
+  _sigma_sq_inv[0] = Gamma(dualres::rng());
 
   if (_n_datasets == 2) {
-    shape = 0.5 * data.Y(1).size() + 1;
-    rate = 0.5 * (data.Y(1) - data.W(0) * __real_mu).squaredNorm();
+    shape = 0.5 * data.Ys().size() + 1;
+    rate = 0.5 * (data.Ys() - data.W() * _real_mu).squaredNorm();
     Gamma = std::gamma_distribution<scalar_type>(shape, 1 / rate);
-    _sigma_sq_inv[1] = Gamma(dualres::internals::_RNG_);
+    _sigma_sq_inv[1] = Gamma(dualres::rng());
   }
   else if (_n_datasets != 1) {
     throw std::logic_error("Parameter updates not implemented for > 2 datasets");
@@ -688,6 +696,18 @@ void dualres::MultiResParameters<T>::_update_sigma_sq_inv(
   // else {
   //   throw std::logic_error("Parameter updates not implemented for > 2 datasets");
   // }
+};
+
+
+
+template< typename T >
+void dualres::MultiResParameters<T>::_update_tau_sq_inv() {
+  const scalar_type shape = 0.5 * _real_mu.size() + 1;
+  const scalar_type rate = 0.5 * _real_mu.squaredNorm();
+  const std::gamma_distribution<scalar_type> Gamma(shape, 1 / rate);
+  const scalar_type tau_sq_inv_star = Gamma(dualres::rng());
+  _lambda *= tau_sq_inv_star / _tau_sq_inv;
+  _tau_sq_inv = tau_sq_inv_star;
 };
 
 
