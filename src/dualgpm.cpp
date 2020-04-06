@@ -1,6 +1,8 @@
 
 #include <Eigen/Core>
 #include <fftw3.h>
+#include <fstream>
+#include <iomanip>
 #include <iostream>
 #include <nifti1_io.h>
 #include <vector>
@@ -123,17 +125,6 @@ int main(int argc, char *argv[]) {
       _high_res_, _std_res_, kernel_params, neighborhood);
   }
 
-  
-  std::cout << "Constructing circulant base and initializing parameters...\n"
-	    << std::flush;
-  
-  dualres::MultiResParameters<scalar_type> _theta_(
-    _n_datasets, kernel_params,
-    dualres::get_nonzero_indices_bounded(_high_res_),
-    dualres::qform_matrix(_high_res_),
-    dualres::use_lambda_method::EXTENDED
-  );
-  std::cout << "Done!" << std::endl;
 
   
   
@@ -146,12 +137,6 @@ int main(int argc, char *argv[]) {
 	    << "\nLeapfrog = " << inputs.mcmc_leapfrog_steps() // _hmc_.integrator_steps()
 	    << std::endl;
 
-  std::cout << "Eigen vector array has size ("
-	    << _theta_.lambda().size() << ")\n\n"
-	    << "Sum( Re(mu_0) ) = " 
-	    << _theta_.mu().sum()
-	    << std::endl;
-
   if (_standard_resolution_available) {
     std::cout << "Kriging matrix has dimension: ("
 	      << _data_.W().rows() << ", " << _data_.W().cols() << ")"
@@ -162,8 +147,20 @@ int main(int argc, char *argv[]) {
   std::cout << "(Extended) size of Y's: " << _data_.Yh().size() << ", "
 	    << _data_.Ys().size()
 	    << std::endl;
+
+
+  std::ofstream mcmc_samples_file("mcmc_samples.dat~");
+  if (mcmc_samples_file) {
   
-  // dualres::fit_dualres_gaussian_process_model<scalar_type>(_data_, _theta_, _hmc_);
+    dualres::gaussian_process::sor_approx::mcmc_mode<scalar_type> mcmc_summary =
+      dualres::gaussian_process::sor_approx::fit_model<scalar_type>(
+        _high_res_, _data_, _hmc_, mcmc_samples_file);
+
+    mcmc_samples_file.close();
+  }
+  else {
+    std::cerr << "Could not write to mcmc_samples.dat" << std::endl;
+  }
   
 
   // Finish by calling  nifti_image_free()

@@ -12,7 +12,7 @@
 template< typename T >
 void dualres::GPMCommandParser<T>::show_usage() const {
   std::cerr << "\nUsage:\n"
-	    << "\tdualresGP <options>\n\n"
+	    << "\tdualgpm <options>\n\n"
 	    << "Options:\n"
 	    << "\t--burnin  int  number of MCMC burnin iterations\n"
 	    << "\t--highres path/to/img1\n"
@@ -25,7 +25,7 @@ void dualres::GPMCommandParser<T>::show_usage() const {
 	    << "\t--thin    int  thinning factor for MCMC samples\n"
 	    << "\t--seed    int  RNG seed\n"
 	    << "\t--threads int  number of threads for parallel computations\n"
-	    << "\img[1-2] are valid NIfTI files and f[1-3] are parameters "
+	    << "\nimg[1-2] are valid NIfTI files and f[1-3] are parameters "
 	    << "of an exponential radial kernel function.\n\n";
 };
 
@@ -192,7 +192,7 @@ dualres::GPMCommandParser<T>::GPMCommandParser(int argc, char* argv[]) {
 	if (i + 1 < argc) {
 	  i++;
 	  try {
-	    _mcmc_nsave = (unsigned)std::max(std::abs(std::stoi(argv[i])), 1);
+	    _mcmc_thin = (unsigned)std::max(std::abs(std::stoi(argv[i])), 1);
 	  }
 	  catch (...) {
 	    std::cerr << "\nWarning: --thin option requires 1 positive integer argument\n";

@@ -38,12 +38,14 @@ namespace dualres {
     const SparseMatrixType& W() const;
     const VectorType& Yh() const;
     const VectorType& Ys() const;
+    const std::vector<scalar_type>& kernel_parameters() const;
     
   private:
     int _n_datasets;
+    SparseMatrixType _W;
     VectorType _Yh;
     VectorType _Ys;
-    SparseMatrixType _W;
+    std::vector<scalar_type> _kernel_parameters;
     // ^^ Mappings of _Yh space -> _Ys, ... space
   };
 
@@ -62,9 +64,10 @@ namespace dualres {
 template< typename T >
 dualres::MultiResData<T>::MultiResData() {
   _n_datasets = 0;
+  _W  = SparseMatrixType(1, 1);
   _Yh = VectorType::Zero(1);
   _Ys = VectorType::Zero(1);
-  _W  = SparseMatrixType(1, 1);
+  _kernel_parameters.push_back(0);
 };
 
 
@@ -72,9 +75,10 @@ template< typename T >
 dualres::MultiResData<T>::MultiResData(const nifti_image* const h_res) {
   std::vector<scalar_type> v_Yh = dualres::get_nonzero_data<scalar_type>(h_res);
   _n_datasets = 1;
+  _W  = SparseMatrixType(1, 1);
   _Yh = Eigen::Map<VectorType>(v_Yh.data(), v_Yh.size());
   _Ys = VectorType::Zero(1);
-  _W  = SparseMatrixType(1, 1);
+  _kernel_parameters.push_back(0);
 };
 
 
@@ -98,6 +102,8 @@ dualres::MultiResData<T>::MultiResData(
     kmd.nrow, kmd.ncol, kmd._Data.size(),
     kmd.cum_row_counts.data(), kmd.column_indices.data(),
     kmd._Data.data());
+  _kernel_parameters = std::vector<scalar_type>(
+    kernel_parameters.cbegin(), kernel_parameters.cend());
 };
 
 
@@ -130,6 +136,12 @@ dualres::MultiResData<T>::W() const {
   return _W;
 };
 
+
+template< typename T >
+const std::vector<typename dualres::MultiResData<T>::scalar_type>&
+dualres::MultiResData<T>::kernel_parameters() const {
+  return _kernel_parameters;
+};
 
 
 #endif  // _DUALRES_MULTI_RES_DATA_2_
