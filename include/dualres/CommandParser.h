@@ -50,6 +50,7 @@ namespace dualres {
     bool operator!() const;
     scalar_type neighborhood() const;
     std::string highres_file() const;
+    std::string output_file_base() const;
     std::string stdres_file() const;
     unsigned int mcmc_burnin() const;
     unsigned int mcmc_leapfrog_steps() const;
@@ -57,9 +58,9 @@ namespace dualres {
     unsigned int mcmc_thin() const;
     unsigned int seed() const;
     unsigned int threads() const;
-    typename std::vector<scalar_type> kernel_parameters() const;
-    typename std::vector<scalar_type>::iterator kernel_begin();
-    typename std::vector<scalar_type>::iterator kernel_end();
+    typename std::vector<scalar_type> covariance_parameters() const;
+    typename std::vector<scalar_type>::iterator covariance_begin();
+    typename std::vector<scalar_type>::iterator covariance_end();
 
     void show_usage() const;
     
@@ -67,6 +68,7 @@ namespace dualres {
     call_status _status;
     scalar_type _neighborhood;
     std::string _highres_file;
+    std::string _output_base;
     std::string _stdres_file;
     unsigned int _mcmc_burnin;
     unsigned int _mcmc_leapfrog_steps;
@@ -74,7 +76,7 @@ namespace dualres {
     unsigned int _mcmc_thin;
     unsigned int _seed;
     unsigned int _threads;
-    std::vector<scalar_type> _kernel_params;
+    std::vector<scalar_type> _covariance_params;
   };
 
 
