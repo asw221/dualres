@@ -59,7 +59,11 @@ int main(int argc, char *argv[]) {
   scalar_type neighborhood = inputs.neighborhood();
   // int n_datasets = 1;
   const bool _standard_resolution_available = !inputs.stdres_file().empty();
-  const int _n_datasets = _standard_resolution_available ? 2 : 1;
+  // const int _n_datasets = _standard_resolution_available ? 2 : 1;
+
+  const std::string _output_file_samples = inputs.output_file("samples.dat");
+  const std::string _output_file_mean = inputs.output_file("posterior_mean.nii");
+  const std::string _output_file_variance = inputs.output_file("posterior_variance.nii");
   
   nifti_image* _high_res_ = nifti_image_read(inputs.highres_file().c_str(), 1);
   nifti_image* _std_res_;
@@ -91,7 +95,7 @@ int main(int argc, char *argv[]) {
   if (neighborhood <= 0) {
     // neighborhood = dualres::kernels::rbf_inverse(
     //   (scalar_type)0.1, covar_params[1], covar_params[2], covar_params[0]);
-    neighborhood = (scalar_type)dualres::voxel_dimensions(
+    neighborhood = 3 * (scalar_type)dualres::voxel_dimensions(
       dualres::qform_matrix(_high_res_)).array().maxCoeff();
   }
   
@@ -140,7 +144,7 @@ int main(int argc, char *argv[]) {
 
 
 
-  std::ofstream mcmc_samples_file("mcmc_samples.dat~");
+  std::ofstream mcmc_samples_file(_output_file_samples.c_str());
   if (mcmc_samples_file) {
   
     dualres::gaussian_process::sor_approx::mcmc_summary<scalar_type> model_output =
@@ -150,7 +154,9 @@ int main(int argc, char *argv[]) {
     mcmc_samples_file.close();
   }
   else {
-    std::cerr << "Could not write to mcmc_samples.dat~" << std::endl;
+    std::cerr << "Could not write MCMC samples to file:\n"
+	      << "\t" << _output_file_samples
+	      << std::endl;
   }
   
 

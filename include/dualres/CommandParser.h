@@ -51,6 +51,7 @@ namespace dualres {
     scalar_type neighborhood() const;
     std::string highres_file() const;
     std::string output_file_base() const;
+    std::string output_file(const std::string &extension) const;
     std::string stdres_file() const;
     unsigned int mcmc_burnin() const;
     unsigned int mcmc_leapfrog_steps() const;

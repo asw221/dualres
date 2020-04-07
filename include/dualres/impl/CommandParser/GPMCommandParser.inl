@@ -329,6 +329,11 @@ std::string dualres::GPMCommandParser<T>::output_file_base() const {
 };
 
 template< typename T >
+std::string dualres::GPMCommandParser<T>::output_file(const std::string &extension) const {
+  return (_output_base + extension);
+};
+
+template< typename T >
 std::string dualres::GPMCommandParser<T>::stdres_file() const {
   return _stdres_file;
 };
