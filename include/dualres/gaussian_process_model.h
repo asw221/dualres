@@ -3,6 +3,7 @@
 #include <Eigen/Core>
 #include <fstream>
 #include <iostream>
+#include <math.h>
 #include <type_traits>
 #include <vector>
 
@@ -32,20 +33,23 @@ namespace dualres {
 
       
       template< typename T >
-      class mcmc_mode {
+      class mcmc_summary {
       public:
 	typedef std::true_type is_mcmc_type;
 	typedef T scalar_type;
 	typedef std::chrono::milliseconds milliseconds;
 	typedef typename Eigen::Matrix<scalar_type, Eigen::Dynamic, 1> VectorType;
 
-	mcmc_mode(const int size_mu, const int size_sigma);
+	mcmc_summary(const int size_mu, const int size_sigma);
 	void update(
           const VectorType &mu,
 	  const std::vector<scalar_type> &sigma,
 	  const scalar_type &log_posterior
         );
 
+
+	void metropolis_hastings_rate(const scalar_type &rate);
+	
 	template< typename DurationType >
 	void sampling_time(const DurationType &duration);
 
@@ -53,11 +57,13 @@ namespace dualres {
 	std::vector<scalar_type> mode_sigma() const;
 	VectorType mode_mu() const;
 	VectorType var_mu() const;
+	scalar_type metropolis_hastings_rate() const;
 	scalar_type sampling_time() const;
 
       private:
 	int _samples;
 	scalar_type _log_posterior;
+	scalar_type _metropolis_hastings_rate;
 	scalar_type _sampling_time;
 	VectorType _first_moment_mu;
 	VectorType _second_moment_mu;
@@ -69,7 +75,7 @@ namespace dualres {
   
 
       template< typename T, typename OStream >
-      dualres::gaussian_process::sor_approx::mcmc_mode<T> fit_model(
+      dualres::gaussian_process::sor_approx::mcmc_summary<T> fit_model(
         const nifti_image* const _high_res_,
         dualres::MultiResData<T> &_data_,
 	dualres::HMCParameters<T> &_hmc_,
@@ -86,7 +92,7 @@ namespace dualres {
 
 	T mh_rate, log_posterior;
 	int save_count = 0;
-	dualres::gaussian_process::sor_approx::mcmc_mode<T> posterior_summary(
+	dualres::gaussian_process::sor_approx::mcmc_summary<T> posterior_summary(
           _theta_.mu().size(), _data_.n_datasets());
 	VectorType mu(_theta_.mu().size());
 	std::vector<T> sigma(_data_.n_datasets());
@@ -124,6 +130,7 @@ namespace dualres {
 	pb.finish();
 	const auto stop = std::chrono::high_resolution_clock::now();
 	posterior_summary.sampling_time(stop - start);
+	posterior_summary.metropolis_hastings_rate(_hmc_.metropolis_hastings_rate());
 	std::cout << "Sampling took " << posterior_summary.sampling_time() << " (sec)"
 		  << std::endl;
 	std::cout << "Metropolis-Hastings rate was "
@@ -145,12 +152,13 @@ namespace dualres {
 
 
 template< typename T >
-dualres::gaussian_process::sor_approx::mcmc_mode<T>::mcmc_mode(
+dualres::gaussian_process::sor_approx::mcmc_summary<T>::mcmc_summary(
   const int size_mu,
   const int size_sigma
 ) {
   _samples = 0;
   _log_posterior = 0;
+  _metropolis_hastings_rate = 0;
   _sampling_time = 0;
   _first_moment_mu = VectorType::Zero(size_mu);
   _second_moment_mu = VectorType::Zero(size_mu);
@@ -161,11 +169,11 @@ dualres::gaussian_process::sor_approx::mcmc_mode<T>::mcmc_mode(
 
 
 template< typename T >
-void dualres::gaussian_process::sor_approx::mcmc_mode<T>::update(
-  const dualres::gaussian_process::sor_approx::mcmc_mode<T>::VectorType& mu,
+void dualres::gaussian_process::sor_approx::mcmc_summary<T>::update(
+  const dualres::gaussian_process::sor_approx::mcmc_summary<T>::VectorType& mu,
   const std::vector<
-    typename dualres::gaussian_process::sor_approx::mcmc_mode<T>::scalar_type>& sigma,
-  const dualres::gaussian_process::sor_approx::mcmc_mode<T>::scalar_type& log_posterior
+    typename dualres::gaussian_process::sor_approx::mcmc_summary<T>::scalar_type>& sigma,
+  const dualres::gaussian_process::sor_approx::mcmc_summary<T>::scalar_type& log_posterior
 ) {
   if (_first_moment_mu.size() != mu.size())
     throw std::domain_error("mu dimension mismatch");
@@ -182,11 +190,20 @@ void dualres::gaussian_process::sor_approx::mcmc_mode<T>::update(
 
 
 
+template< typename T >
+void dualres::gaussian_process::sor_approx::mcmc_summary<T>::metropolis_hastings_rate(
+  const dualres::gaussian_process::sor_approx::mcmc_summary<T>::scalar_type &rate
+) {
+  scalar_type __rate = rate;
+  if (isnan(rate))  __rate = 0;
+  if (__rate >= 0 && __rate <= 1)
+    _metropolis_hastings_rate = __rate;
+};
 
 
 template< typename T >
 template< typename DurationType >
-void dualres::gaussian_process::sor_approx::mcmc_mode<T>::sampling_time(
+void dualres::gaussian_process::sor_approx::mcmc_summary<T>::sampling_time(
   const DurationType &duration
 ) {
   _sampling_time = (scalar_type)std::chrono::duration_cast<milliseconds>
@@ -196,7 +213,7 @@ void dualres::gaussian_process::sor_approx::mcmc_mode<T>::sampling_time(
 
 
 template< typename T >
-int dualres::gaussian_process::sor_approx::mcmc_mode<T>::samples() const {
+int dualres::gaussian_process::sor_approx::mcmc_summary<T>::samples() const {
   return (_samples <= 0) ? 1 : _samples;
 };
 
@@ -204,8 +221,8 @@ int dualres::gaussian_process::sor_approx::mcmc_mode<T>::samples() const {
 
 
 template< typename T >
-std::vector<typename dualres::gaussian_process::sor_approx::mcmc_mode<T>::scalar_type>
-dualres::gaussian_process::sor_approx::mcmc_mode<T>::mode_sigma() const {
+std::vector<typename dualres::gaussian_process::sor_approx::mcmc_summary<T>::scalar_type>
+dualres::gaussian_process::sor_approx::mcmc_summary<T>::mode_sigma() const {
   std::vector<scalar_type> __mode(_sigma.size());
   for (int i = 0; i < _sigma.size(); i++)
     __mode[i] = _sigma[i] / samples();
@@ -215,16 +232,16 @@ dualres::gaussian_process::sor_approx::mcmc_mode<T>::mode_sigma() const {
 
 
 template< typename T >
-typename dualres::gaussian_process::sor_approx::mcmc_mode<T>::VectorType
-dualres::gaussian_process::sor_approx::mcmc_mode<T>::mode_mu() const {
+typename dualres::gaussian_process::sor_approx::mcmc_summary<T>::VectorType
+dualres::gaussian_process::sor_approx::mcmc_summary<T>::mode_mu() const {
   return _first_moment_mu / samples();
 };
 
 
 
 template< typename T >
-typename dualres::gaussian_process::sor_approx::mcmc_mode<T>::VectorType
-dualres::gaussian_process::sor_approx::mcmc_mode<T>::var_mu() const {
+typename dualres::gaussian_process::sor_approx::mcmc_summary<T>::VectorType
+dualres::gaussian_process::sor_approx::mcmc_summary<T>::var_mu() const {
   return ( _second_moment_mu -
 	  (_first_moment_mu.array() * _first_moment_mu.array()).matrix() /
 	  samples() ) / samples();
@@ -232,8 +249,15 @@ dualres::gaussian_process::sor_approx::mcmc_mode<T>::var_mu() const {
 
 
 template< typename T >
-typename dualres::gaussian_process::sor_approx::mcmc_mode<T>::scalar_type
-dualres::gaussian_process::sor_approx::mcmc_mode<T>::sampling_time() const {
+typename dualres::gaussian_process::sor_approx::mcmc_summary<T>::scalar_type
+dualres::gaussian_process::sor_approx::mcmc_summary<T>::metropolis_hastings_rate() const {
+  return _metropolis_hastings_rate;
+};
+
+
+template< typename T >
+typename dualres::gaussian_process::sor_approx::mcmc_summary<T>::scalar_type
+dualres::gaussian_process::sor_approx::mcmc_summary<T>::sampling_time() const {
   return _sampling_time;
 };
 

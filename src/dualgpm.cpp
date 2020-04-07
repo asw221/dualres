@@ -128,38 +128,29 @@ int main(int argc, char *argv[]) {
 
   
   
-  std::cout << "Kernel parameters: ("
+  std::cout << "\nCovariance parameters: ("
 	    << kernel_params[0] << ", " << kernel_params[1] << ", " << kernel_params[2]
 	    << ")\nNieghborhood: " << neighborhood << " (mm)"
+	    << "\n\nMCMC settings:"
 	    << "\nBurnin   = " << _hmc_.burnin_iterations()
 	    << "\nNSave    = " << _hmc_.n_save()
 	    << "\nThin     = " << _hmc_.thin_iterations()
 	    << "\nLeapfrog = " << inputs.mcmc_leapfrog_steps() // _hmc_.integrator_steps()
 	    << std::endl;
 
-  if (_standard_resolution_available) {
-    std::cout << "Kriging matrix has dimension: ("
-	      << _data_.W().rows() << ", " << _data_.W().cols() << ")"
-	      << std::endl;
-  }
-
-
-  std::cout << "(Extended) size of Y's: " << _data_.Yh().size() << ", "
-	    << _data_.Ys().size()
-	    << std::endl;
 
 
   std::ofstream mcmc_samples_file("mcmc_samples.dat~");
   if (mcmc_samples_file) {
   
-    dualres::gaussian_process::sor_approx::mcmc_mode<scalar_type> mcmc_summary =
+    dualres::gaussian_process::sor_approx::mcmc_summary<scalar_type> model_output =
       dualres::gaussian_process::sor_approx::fit_model<scalar_type>(
         _high_res_, _data_, _hmc_, mcmc_samples_file);
 
     mcmc_samples_file.close();
   }
   else {
-    std::cerr << "Could not write to mcmc_samples.dat" << std::endl;
+    std::cerr << "Could not write to mcmc_samples.dat~" << std::endl;
   }
   
 

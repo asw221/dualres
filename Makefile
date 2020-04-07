@@ -1,6 +1,6 @@
 
 CXX := clang++
-CXXFLAGS := -g -Wall -O0 -std=c++17
+CXXFLAGS := -g -Wall -std=c++17 -O2
 
 SRCDIR := src
 BUILDDIR := build

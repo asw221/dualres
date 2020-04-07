@@ -95,7 +95,7 @@ dualres::MultiResData<T>::MultiResData(
   std::vector<scalar_type> v_Yh = dualres::get_nonzero_data<scalar_type>(h_res);
   std::vector<scalar_type> v_Ys = dualres::get_nonzero_data<scalar_type>(s_res);
   
-  _n_datasets = 1;
+  _n_datasets = 2;
   _Yh = Eigen::Map<VectorType>(v_Yh.data(), v_Yh.size());
   _Ys = Eigen::Map<VectorType>(v_Ys.data(), v_Ys.size());
   _W  = Eigen::Map<SparseMatrixType>(

@@ -229,6 +229,7 @@ dualres::MultiResParameters<T>::MultiResParameters(
   
 
   // Now compute _lambda
+  // _lambda itself is never low-rank adjusted
   std::cout << "Computing eigen values... " << std::flush;
   _lambda = dualres::circulant_base_3d<scalar_type>(__image_grid_dims, Qform_yh,
     compute_lambda_on_extended_grid).template cast<complex_type>();
@@ -309,6 +310,7 @@ dualres::MultiResParameters<T>::_compute_gradient(
   // if (data.n_datasets() < _n_datasets)
   //   throw std::logic_error("Insufficient data for parameters");
 #endif
+  // evaluate into __temp_product and save memory?
   fftwf_execute_dft(__backward_fft_plan,
     reinterpret_cast<fftwf_complex*>(mu_star.data()),
     reinterpret_cast<fftwf_complex*>(_grad.data())
@@ -493,11 +495,13 @@ dualres::MultiResParameters<T>::_potential_energy() {
     reinterpret_cast<fftwf_complex*>(_momentum.data()),
     reinterpret_cast<fftwf_complex*>(__temp_product.data())
   );
+  // _lambda_mass is already low-rank adjusted
 
   int i;
 #pragma omp parallel for shared(__temp_product, _lambda_mass) private(i) reduction(+ : __pe)
   for (i = 0; i < __temp_product.size(); i++)
-    __pe += std::conj(__temp_product[i]) * _lambda_mass[i] * __temp_product[i];
+    __pe += std::conj(__temp_product[i]) * _lambda_mass[i] * __temp_product[i] /
+      (scalar_type)_lambda_mass.size();
   return -0.5 * __pe.real();
 };
 
@@ -567,7 +571,7 @@ dualres::MultiResParameters<T>::update(
   _mu_star = _mu;
   _compute_mass_matrix_eigen_values();
   _sample_momentum();
-  _low_rank_adjust(_lambda_mass);
+  // _low_rank_adjust(_lambda_mass);
   _initial_energy += _log_posterior(data, _mu);  // _sample_momentum() initilizes energy
   _momentum += k * eps * _compute_gradient(data, _mu_star);
   for (int step = 0; step < L; step++) {
@@ -576,7 +580,7 @@ dualres::MultiResParameters<T>::update(
       reinterpret_cast<fftwf_complex*>(_momentum.data()),
       reinterpret_cast<fftwf_complex*>(__temp_product.data())
     );
-    __temp_product *= eps / (scalar_type)_lambda_mass.size() * _lambda_mass;
+    __temp_product *= (eps / _lambda_mass.size()) * _lambda_mass;
     // _lambda_mass is already low-rank adjusted
     fftwf_execute_dft(__forward_fft_plan,
       reinterpret_cast<fftwf_complex*>(__temp_product.data()),
@@ -614,6 +618,7 @@ void dualres::MultiResParameters<T>::_compute_mass_matrix_eigen_values() {
   // _lambda_mass = (-1 / (_lambda * _sigma_sq_inv[0] + 1) + 1) /
   //   _sigma_sq_inv[0];
   _lambda_mass = 1 / (_lambda + 1 / _sigma_sq_inv[0]);
+  _low_rank_adjust(_lambda_mass);
 };
 
 
@@ -695,6 +700,7 @@ void dualres::MultiResParameters<T>::_update_sigma_sq_inv(
   const typename dualres::MultiResData<
     typename dualres::MultiResParameters<T>::scalar_type> &data
 ) {
+  // _real_mu must be set/updated before _update_sigma_sq_inv is called
   scalar_type shape = 0.5 * data.Yh().size() + 1;
   scalar_type rate = 0.5 * (data.Yh() - _real_mu).squaredNorm();
   // New update scheme: just sample _sigma_sq_inv's from gamma's w/out worrying
@@ -734,6 +740,7 @@ void dualres::MultiResParameters<T>::_update_sigma_sq_inv(
 
 template< typename T >
 void dualres::MultiResParameters<T>::_update_tau_sq_inv() {
+  // _real_mu must be set/updated before _update_tau_sq_inv is called
   const scalar_type shape = 0.5 * _real_mu.size() + 1;
   const scalar_type rate = 0.5 * _real_mu.squaredNorm();
   const std::gamma_distribution<scalar_type> Gamma(shape, 1 / rate);
