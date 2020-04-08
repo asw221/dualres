@@ -58,8 +58,7 @@ dualres::GPMCommandParser<T>::GPMCommandParser(int argc, char* argv[]) {
   _seed = std::max(_seed, (unsigned)1);
   _threads = (unsigned)0;
 
-  ss.str("dualres_mcmc_");
-  ss << _seed << "_";
+  ss << "dualres_mcmc_" << _seed << "_";
   _output_base = ss.str();
 
 

@@ -84,7 +84,7 @@ namespace dualres {
 	typedef typename Eigen::Matrix<T, Eigen::Dynamic, 1> VectorType;
 	
 	dualres::MultiResParameters<T> _theta_(
-          _data_.n_datasets(), _data_.kernel_parameters(),
+          _data_.n_datasets(), _data_.covariance_parameters(),
 	  dualres::get_nonzero_indices_bounded(_high_res_),
 	  dualres::qform_matrix(_high_res_),
 	  dualres::use_lambda_method::EXTENDED
@@ -98,8 +98,10 @@ namespace dualres {
 	std::vector<T> sigma(_data_.n_datasets());
 	
 
-	std::cout << "\nFitting model with rmHMC and subset of regressors approximation:"
-		  << std::endl;
+	std::cout << "\nFitting model with rmHMC";
+	if (_data_.n_datasets() > 1)
+	  std::cout << " and subset of regressors approximation";
+	std::cout << std::endl;
 	dualres::utilities::progress_bar pb(_hmc_.max_iterations());
 	
 	auto start = std::chrono::high_resolution_clock::now();
@@ -111,10 +113,10 @@ namespace dualres {
 	      start = std::chrono::high_resolution_clock::now();
 	    // save stuff ...
 	    mu = _theta_.mu();
-	    _output_stream_ << mu.transpose() << "  ";
+	    _output_stream_ << mu.transpose() << " ";
 	    for (int i = 0; i < _data_.n_datasets(); i++) {
 	      sigma[i] = _theta_.sigma(i);
-	      _output_stream_ << sigma[i] << "  ";
+	      _output_stream_ << sigma[i] << " ";
 	    }
 	    log_posterior = _theta_.log_posterior(_data_);
 	    _output_stream_ << log_posterior;

@@ -53,21 +53,26 @@ int main(int argc, char *argv[]) {
   omp_set_num_threads(dualres::threads());
   Eigen::setNbThreads(dualres::threads());
   fftwf_plan_with_nthreads(dualres::threads());
-  std::cout << "[dualres running on " << dualres::threads() << " cores]" << std::endl;
-
+  std::cout << "[dualres running on " << dualres::threads()
+	    << " cores]" << std::endl;
 
   scalar_type neighborhood = inputs.neighborhood();
   // int n_datasets = 1;
-  const bool _standard_resolution_available = !inputs.stdres_file().empty();
+  const bool _standard_resolution_available =
+    !inputs.stdres_file().empty();
   // const int _n_datasets = _standard_resolution_available ? 2 : 1;
 
-  const std::string _output_file_samples = inputs.output_file("samples.dat");
-  const std::string _output_file_mean = inputs.output_file("posterior_mean.nii");
-  const std::string _output_file_variance = inputs.output_file("posterior_variance.nii");
+  const std::string _output_file_samples = inputs.output_file(
+    "_samples.dat");
+  const std::string _output_file_mean = inputs.output_file(
+    "_posterior_mean.nii");
+  const std::string _output_file_variance = inputs.output_file(
+    "_posterior_variance.nii");
   
-  nifti_image* _high_res_ = nifti_image_read(inputs.highres_file().c_str(), 1);
+  nifti_image* _high_res_;
   nifti_image* _std_res_;
 
+  _high_res_ = nifti_image_read(inputs.highres_file().c_str(), 1);
   if (_standard_resolution_available) {
     _std_res_ = nifti_image_read(inputs.stdres_file().c_str(), 1);
     
@@ -78,16 +83,16 @@ int main(int argc, char *argv[]) {
   }
 
   
-  std::vector<scalar_type> covar_params = inputs.covariance_parameters();
+  std::vector<scalar_type> _covar_params = inputs.covariance_parameters();
   // If covar parameters are not given, estimate them from inputs. Use
   // Std Res image first if available
   if (_standard_resolution_available) {
-    if (!compute_covar_parameters_if_needed(covar_params, _std_res_))  return 1;
+    if (!compute_covar_parameters_if_needed(_covar_params, _std_res_))  return 1;
   }
-  else if (!compute_covar_parameters_if_needed(covar_params, _high_res_)) {
+  else if (!compute_covar_parameters_if_needed(_covar_params, _high_res_)) {
     return 1;
   }
-  if (!valid_covar_parameters(covar_params))  return 1;
+  if (!valid_covar_parameters(_covar_params))  return 1;
     
 
   // If the (mm) neighborhood is not given, compute it from the covar
@@ -101,55 +106,52 @@ int main(int argc, char *argv[]) {
   
 
 
-  
-  if (!inputs.highres_file().empty())
-    std::cout << "High-resolution file: " << inputs.highres_file() << std::endl;
-  if (!inputs.stdres_file().empty())
-    std::cout << "Standard-resolution file: " << inputs.stdres_file() << std::endl;
-
-
-
-  // "Body:"
-  // const Eigen::MatrixXi ijk_high = dualres::get_nonzero_indices_bounded(_high_res_);  
   dualres::HMCParameters<scalar_type> _hmc_(
     inputs.mcmc_burnin(), inputs.mcmc_nsave(), inputs.mcmc_thin(),
     inputs.mcmc_leapfrog_steps()
   );
 
 
-  std::vector<scalar_type> __Yh = dualres::get_nonzero_data<scalar_type>(_high_res_);
-  std::vector<scalar_type> __Ys;
-  dualres::MultiResData<scalar_type> _data_;
-  
+  dualres::MultiResData<scalar_type> _data_;  
   if (!_standard_resolution_available) {
-    _data_ = dualres::MultiResData<scalar_type>(_high_res_);
+    _data_ = dualres::MultiResData<scalar_type>(
+      _high_res_, _covar_params);
   }
   else {
     _data_ = dualres::MultiResData<scalar_type>(
-      _high_res_, _std_res_, covar_params, neighborhood);
+      _high_res_, _std_res_, _covar_params, neighborhood);
   }
 
 
   
-  
+    
+  std::cout << "High-resolution file: " << inputs.highres_file()
+	    << std::endl;
+  if (_standard_resolution_available)
+    std::cout << "Standard-resolution file: " << inputs.stdres_file()
+	      << std::endl;
+
   std::cout << "\nCovariance parameters: ("
-	    << covar_params[0] << ", " << covar_params[1] << ", " << covar_params[2]
-	    << ")\nNieghborhood: " << neighborhood << " (mm)"
-	    << "\n\nMCMC settings:"
+	    << _covar_params[0] << ", " << _covar_params[1] << ", "
+	    << _covar_params[2] << ")\n";
+  if (_standard_resolution_available) {
+    std::cout << ")\nNeighborhood: " << neighborhood << " (mm)\n";
+  }
+  std::cout << "\nMCMC settings:"
 	    << "\nBurnin   = " << _hmc_.burnin_iterations()
 	    << "\nNSave    = " << _hmc_.n_save()
 	    << "\nThin     = " << _hmc_.thin_iterations()
-	    << "\nLeapfrog = " << inputs.mcmc_leapfrog_steps() // _hmc_.integrator_steps()
+	    << "\nLeapfrog = " << inputs.mcmc_leapfrog_steps()
 	    << std::endl;
 
 
 
   std::ofstream mcmc_samples_file(_output_file_samples.c_str());
   if (mcmc_samples_file) {
-  
-    dualres::gaussian_process::sor_approx::mcmc_summary<scalar_type> model_output =
-      dualres::gaussian_process::sor_approx::fit_model<scalar_type>(
-        _high_res_, _data_, _hmc_, mcmc_samples_file);
+
+    dualres::gaussian_process::sor_approx::mcmc_summary<scalar_type>
+  model_output = dualres::gaussian_process::sor_approx::fit_model
+    <scalar_type>(_high_res_, _data_, _hmc_, mcmc_samples_file);
 
     mcmc_samples_file.close();
   }
@@ -199,8 +201,6 @@ bool compute_covar_parameters_if_needed(
 	theta.push_back((T)covar_params_dtemp[i]);
       std::cout << "Done!" << std::endl;
     }
-  }
-  else {
   }
   return success;
 };
