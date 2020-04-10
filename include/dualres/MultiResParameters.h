@@ -200,15 +200,17 @@ dualres::MultiResParameters<T>::MultiResParameters(
   // _grad = ComplexArrayType::Zero(__lambda_grid_dims.prod());
   _lambda_mass = ComplexArrayType::Zero(__lambda_grid_dims.prod());
   _momentum = ComplexArrayType::Zero(__lambda_grid_dims.prod());
+  _mu = ComplexArrayType::Zero(__lambda_grid_dims.prod());
+  _mu_star = ComplexArrayType::Zero(__lambda_grid_dims.prod());
   __temp_product = ComplexArrayType::Zero(__lambda_grid_dims.prod());
 
-  // In-place transformations:
+  
   if (dualres::utilities::file_exists(dualres::fftw_wisdom_file().string()))
     fftwf_import_wisdom_from_filename(dualres::fftw_wisdom_file().c_str());
   
   std::cout << "Selecting forward DFT algorithm... " << std::flush;
   __forward_fft_plan = fftwf_plan_dft_3d(
-    __image_grid_dims[2], __image_grid_dims[1], __image_grid_dims[0],
+    __lambda_grid_dims[2], __lambda_grid_dims[1], __lambda_grid_dims[0],
     reinterpret_cast<fftwf_complex*>(_lambda.data()),
     reinterpret_cast<fftwf_complex*>(_lambda.data()),
     FFTW_FORWARD, FFTW_PATIENT
@@ -217,7 +219,7 @@ dualres::MultiResParameters<T>::MultiResParameters(
     
   std::cout << "Selecting inverse DFT algorithm... " << std::flush;
   __backward_fft_plan = fftwf_plan_dft_3d(
-    __image_grid_dims[2], __image_grid_dims[1], __image_grid_dims[0],
+    __lambda_grid_dims[2], __lambda_grid_dims[1], __lambda_grid_dims[0],
     reinterpret_cast<fftwf_complex*>(_lambda.data()),
     reinterpret_cast<fftwf_complex*>(_lambda.data()),
     FFTW_BACKWARD, FFTW_PATIENT
@@ -261,16 +263,13 @@ dualres::MultiResParameters<T>::MultiResParameters(
 
   __lambda_grid_indices = ijk_yh.col(2) * __lambda_grid_dims[0] * __lambda_grid_dims[1] +
     ijk_yh.col(1) * __lambda_grid_dims[0] + ijk_yh.col(0);
+
+
+  _real_mu = VectorType::Zero(__lambda_grid_indices.size());
+  _real_sub_grad = VectorType::Zero(__lambda_grid_indices.size());
   
   _initialize_mu();
   _initialize_sigma(covariance_parameters[0]);
-  _real_sub_grad = VectorType::Zero(__lambda_grid_indices.size());
-
-  std::cout << "lambda grid indices:\n"
-	    << "\tsize = " << __lambda_grid_indices.size() << "\n"
-	    << "\tmin  = " << __lambda_grid_indices.minCoeff() << "\n"
-	    << "\tmax  = " << __lambda_grid_indices.maxCoeff() << "\n"
-	    << std::endl;
 };
 
 
@@ -284,9 +283,11 @@ template< typename T >
 void dualres::MultiResParameters<T>::_low_rank_adjust(
   typename dualres::MultiResParameters<T>::ComplexArrayType &A
 ) {
-  for (std::vector<int>::const_iterator it = _nonpositive_eigen_values.cbegin();
-       it != _nonpositive_eigen_values.cend(); ++it) {
-    A[*it] = complex_type(0, 0);
+  if (!_nonpositive_eigen_values.empty()) {
+    for (std::vector<int>::const_iterator it = _nonpositive_eigen_values.cbegin();
+	 it != _nonpositive_eigen_values.cend(); ++it) {
+      A[*it] = complex_type(0, 0);
+    }
   }
 };
 
@@ -316,7 +317,7 @@ dualres::MultiResParameters<T>::_compute_gradient(
   // if (data.n_datasets() < _n_datasets)
   //   throw std::logic_error("Insufficient data for parameters");
 #endif
-  // evaluate into __temp_product and save memory?
+  // __temp_product.setZero();  
   fftwf_execute_dft(__backward_fft_plan,
     reinterpret_cast<fftwf_complex*>(mu_star.data()),
     reinterpret_cast<fftwf_complex*>(__temp_product.data())
@@ -334,9 +335,9 @@ dualres::MultiResParameters<T>::_compute_gradient(
     _real_sub_grad = _sigma_sq_inv[0] * (data.Yh() - _real_mu);
   }
   else if (_n_datasets == 2) {
-    _real_sub_grad = _sigma_sq_inv[0] * (data.Yh() - _real_mu) +
+    _real_sub_grad.noalias() = _sigma_sq_inv[0] * (data.Yh() - _real_mu) +
       _sigma_sq_inv[1] * ( (data.Ys() - (data.W() * _real_mu)).transpose() *
-			  data.W() ).transpose();
+			   data.W() ).transpose();
   }
   else {
     throw std::logic_error("Gradient only implemented for single or dual resolution");
@@ -397,19 +398,19 @@ dualres::MultiResParameters<T>::_log_prior(
   //   af::sum<scalar_type>(af::real(af::conjg(__Fh_x) / _lambda
   // 				  * _positive_eigen_values * __Fh_x));
   complex_type __lp(0, 0);
+  // __temp_product.setZero();
   fftwf_execute_dft(__backward_fft_plan,
     reinterpret_cast<fftwf_complex*>(mu_star.data()),
     reinterpret_cast<fftwf_complex*>(__temp_product.data())
   );
-  // __temp_product /= _lambda.size() * _lambda;
   _low_rank_adjust(__temp_product);
 
-  int i;
-#pragma omp parallel for shared(__temp_product, _lambda) private(i) reduction(+ : __lp)
-  for (i = 0; i < __temp_product.size(); i++)
-    __lp += std::conj(__temp_product[i]) * __temp_product[i] /
-      ( _lambda[i] * (scalar_type)_lambda.size() );
-  return -0.5 * __lp.real();
+#pragma omp parallel for reduction(+ : __lp)
+  for (int i = 0; i < __temp_product.size(); i++)
+    __lp += std::conj(__temp_product.coeffRef(i)) *
+      __temp_product.coeffRef(i) /
+      ( _lambda.coeffRef(i) * (scalar_type)_lambda.size() );
+  return -0.5 * __lp.real() / _lambda.size();
 };
 
 
@@ -491,18 +492,17 @@ dualres::MultiResParameters<T>::_potential_energy() {
   // __Fh_x = af::idft(_momentum) / std::sqrt((scalar_type)_momentum.elements());
   // return -0.5 * af::sum<scalar_type>(af::real(af::conjg(__Fh_x) * _lambda_mass * __Fh_x));
   complex_type __pe(0, 0);
+  // __temp_product.setZero();
   fftwf_execute_dft(__backward_fft_plan,
     reinterpret_cast<fftwf_complex*>(_momentum.data()),
     reinterpret_cast<fftwf_complex*>(__temp_product.data())
   );
   // _lambda_mass is already low-rank adjusted
 
-  int i;
-#pragma omp parallel for shared(__temp_product, _lambda_mass) private(i) reduction(+ : __pe)
-  for (i = 0; i < __temp_product.size(); i++)
-    __pe += std::conj(__temp_product[i]) * _lambda_mass[i] * __temp_product[i] /
-      (scalar_type)_lambda_mass.size();
-  return -0.5 * __pe.real();
+#pragma omp parallel for reduction(+ : __pe)
+  for (int i = 0; i < __temp_product.size(); i++)
+    __pe += std::conj(__temp_product[i]) * _lambda_mass[i] * __temp_product[i];
+  return -0.5 * __pe.real() / _lambda_mass.size();
 };
 
 
@@ -574,16 +574,20 @@ dualres::MultiResParameters<T>::update(
   const typename dualres::MultiResParameters<T>::scalar_type eps,
   const int L
 ) {
-  static std::uniform_real_distribution<scalar_type> Uniform(0, 1);
+  std::uniform_real_distribution<scalar_type> _Uniform(0, 1);
   scalar_type k = 0.5, proposed_energy, R;
+  scalar_type lp_initial, lp_proposal;
   _mu_star = _mu;
   _compute_mass_matrix_eigen_values();
   _sample_momentum();
   // _low_rank_adjust(_lambda_mass);
-  _initial_energy += _log_posterior(data, _mu);  // _sample_momentum() initilizes energy
+  lp_initial = _log_posterior(data, _mu);
+  // _initial_energy += _log_posterior(data, _mu);  // _sample_momentum() initilizes energy
+  _initial_energy += lp_initial;
   _momentum += k * eps * _compute_gradient(data, _mu_star);
   for (int step = 0; step < L; step++) {
     k = (step == (L - 1)) ? 0.5 : 1;
+    // __temp_product.setZero();
     fftwf_execute_dft(__backward_fft_plan,
       reinterpret_cast<fftwf_complex*>(_momentum.data()),
       reinterpret_cast<fftwf_complex*>(__temp_product.data())
@@ -600,10 +604,17 @@ dualres::MultiResParameters<T>::update(
     _momentum += k * eps * _compute_gradient(data, _mu_star);
   }
   // Technically: _momentum *= -1;
-  proposed_energy = _log_posterior(data, _mu_star) + _potential_energy();
+  lp_proposal = _log_posterior(data, _mu_star);
+  // proposed_energy = _log_posterior(data, _mu_star) + _potential_energy();
+  proposed_energy = lp_proposal + _potential_energy();
   R = std::exp(proposed_energy - _initial_energy);
+  std::cout << "Init. E: " << _initial_energy
+  	    << "\tProp. E: " << proposed_energy
+  	    << "\teps = " << eps
+  	    << "\tR = " << R
+  	    << std::endl;
   if (isnan(R))  R = 0;
-  if (Uniform(dualres::rng()) < R) {
+  if (_Uniform(dualres::rng()) < R) {
     _mu = _mu_star;
     _total_energy = proposed_energy;
   }
@@ -653,8 +664,8 @@ void dualres::MultiResParameters<T>::_initialize_mu(
     reinterpret_cast<fftwf_complex*>(_mu.data()),
     reinterpret_cast<fftwf_complex*>(_mu.data())
   );
-  _real_mu = dualres::nullary_index(_mu.matrix().real(), __lambda_grid_indices);
-  // _set_real_mu(_mu);
+   _real_mu = dualres::nullary_index(_mu.matrix().real(), __lambda_grid_indices);
+   // _set_real_mu(_mu);
 };
 
 

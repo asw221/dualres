@@ -103,6 +103,27 @@ int main(int argc, char *argv[]) {
     neighborhood = 3 * (scalar_type)dualres::voxel_dimensions(
       dualres::qform_matrix(_high_res_)).array().maxCoeff();
   }
+    
+  std::cout << "High-resolution file: " << inputs.highres_file()
+	    << std::endl;
+  if (_standard_resolution_available)
+    std::cout << "Standard-resolution file: " << inputs.stdres_file()
+	      << std::endl;
+
+  std::cout << "\nCovariance parameters: ("
+	    << _covar_params[0] << ", " << _covar_params[1] << ", "
+	    << _covar_params[2] << ")\n";
+  if (_standard_resolution_available) {
+    std::cout << "Neighborhood: " << neighborhood << " (mm)\n";
+  }
+  std::cout << "\nMCMC settings:"
+	    << "\nBurnin   = " << inputs.mcmc_burnin()
+	    << "\nNSave    = " << inputs.mcmc_nsave()
+	    << "\nThin     = " << inputs.mcmc_thin()
+	    << "\nLeapfrog = " << inputs.mcmc_leapfrog_steps()
+	    << "\n" << std::endl;
+
+
   
 
 
@@ -121,29 +142,7 @@ int main(int argc, char *argv[]) {
     _data_ = dualres::MultiResData<scalar_type>(
       _high_res_, _std_res_, _covar_params, neighborhood);
   }
-
-
-  
-    
-  std::cout << "High-resolution file: " << inputs.highres_file()
-	    << std::endl;
-  if (_standard_resolution_available)
-    std::cout << "Standard-resolution file: " << inputs.stdres_file()
-	      << std::endl;
-
-  std::cout << "\nCovariance parameters: ("
-	    << _covar_params[0] << ", " << _covar_params[1] << ", "
-	    << _covar_params[2] << ")\n";
-  if (_standard_resolution_available) {
-    std::cout << ")\nNeighborhood: " << neighborhood << " (mm)\n";
-  }
-  std::cout << "\nMCMC settings:"
-	    << "\nBurnin   = " << _hmc_.burnin_iterations()
-	    << "\nNSave    = " << _hmc_.n_save()
-	    << "\nThin     = " << _hmc_.thin_iterations()
-	    << "\nLeapfrog = " << inputs.mcmc_leapfrog_steps()
-	    << std::endl;
-
+  // _data_.print_summary();
 
 
   std::ofstream mcmc_samples_file(_output_file_samples.c_str());

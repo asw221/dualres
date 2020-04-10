@@ -113,6 +113,16 @@ namespace dualres {
   };
 
 
+  double _rbf_constraint(
+    const std::vector<double> &x,
+    std::vector<double> &grad,
+    void* data
+  ) {
+    // Constrain exponent > bandwidth
+    return x[1] - x[2];
+  };
+
+
   
 
   // Estimate RBF parameters from MCE_DATA summaries
@@ -147,7 +157,8 @@ namespace dualres {
     optimizer.set_lower_bounds(lb);
     optimizer.set_upper_bounds(ub);
     optimizer.set_min_objective(dualres::_rbf_least_squares, &objective_data);
-    optimizer.set_xtol_rel(1e-4);
+    optimizer.add_inequality_constraint(dualres::_rbf_constraint, NULL, eps0 / 100);
+    optimizer.set_xtol_rel(1e-5);
     try {
       optimizer.optimize(theta, min_obj);
     }

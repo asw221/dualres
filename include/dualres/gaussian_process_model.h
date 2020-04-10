@@ -113,10 +113,12 @@ namespace dualres {
 	      start = std::chrono::high_resolution_clock::now();
 	    // save stuff ...
 	    mu = _theta_.mu();
-	    _output_stream_ << mu.transpose() << " ";
+	    // _output_stream_ << mu.transpose() << " ";
+	    for (int i = 0; i < mu.size(); i++)
+	      _output_stream_ << mu.coeffRef(i) << "\t";
 	    for (int i = 0; i < _data_.n_datasets(); i++) {
 	      sigma[i] = _theta_.sigma(i);
-	      _output_stream_ << sigma[i] << " ";
+	      _output_stream_ << sigma[i] << "\t";
 	    }
 	    log_posterior = _theta_.log_posterior(_data_);
 	    _output_stream_ << log_posterior;
@@ -127,7 +129,7 @@ namespace dualres {
 	    save_count++;
 	  }
 	  pb++;
-	  std::cout << pb;
+	  // std::cout << pb;
 	}
 	pb.finish();
 	const auto stop = std::chrono::high_resolution_clock::now();

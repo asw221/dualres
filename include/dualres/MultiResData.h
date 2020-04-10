@@ -2,6 +2,7 @@
 #include <algorithm>
 #include <Eigen/Core>
 #include <Eigen/SparseCore>
+#include <iostream>
 #include <nifti1_io.h>
 #include <vector>
 
@@ -42,6 +43,8 @@ namespace dualres {
     const VectorType& Yh() const;
     const VectorType& Ys() const;
     const std::vector<scalar_type>& covariance_parameters() const;
+
+    void print_summary() const;
     
   private:
     int _n_datasets;
@@ -150,6 +153,26 @@ dualres::MultiResData<T>::covariance_parameters() const {
   return _covariance_parameters;
 };
 
+
+template< typename T >
+void dualres::MultiResData<T>::print_summary() const {
+  std::cout << "Y_h:\n["
+	    << _Yh.minCoeff() << " ... "
+	    << (_Yh.sum() / _Yh.size()) << " ... "
+	    << _Yh.maxCoeff() << "]\tvar = "
+	    << (_Yh.squaredNorm() / _Yh.size() -
+		_Yh.sum() * _Yh.sum() / (_Yh.size() * _Yh.size()))
+	    << std::endl;
+  if (_n_datasets == 2) {
+  std::cout << "Y_s:\n["
+	    << _Ys.minCoeff() << " ... "
+	    << (_Ys.sum() / _Ys.size()) << " ... "
+	    << _Ys.maxCoeff() << "]\tvar = "
+	    << (_Ys.squaredNorm() / _Ys.size() -
+		_Ys.sum() * _Ys.sum() / (_Ys.size() * _Ys.size()))
+	    << std::endl;
+  }
+};
 
 #endif  // _DUALRES_MULTI_RES_DATA_2_
 
