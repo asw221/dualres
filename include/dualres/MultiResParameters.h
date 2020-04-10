@@ -499,9 +499,10 @@ dualres::MultiResParameters<T>::_potential_energy() {
   );
   // _lambda_mass is already low-rank adjusted
 
-#pragma omp parallel for reduction(+ : __pe)
+  // #pragma omp parallel for reduction(+ : __pe)  // <- this one doesn't work
   for (int i = 0; i < __temp_product.size(); i++)
-    __pe += std::conj(__temp_product[i]) * _lambda_mass[i] * __temp_product[i];
+    __pe += std::conj(__temp_product.coeffRef(i)) *
+      _lambda_mass.coeffRef(i) * __temp_product.coeffRef(i);
   return -0.5 * __pe.real() / _lambda_mass.size();
 };
 
