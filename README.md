@@ -10,6 +10,15 @@
  - [zlib](https://www.zlib.net/)
  
  
+#### Installation
+Using cmake with dependencies installed:
+```
+cd dualres/lib/nifti && make all
+cd ../../ && mkdir build && cd build
+cmake ..
+make
+```
+ 
 #### To-do
  - Enhance comments and help pages
  - RBF parameter estimation: add option for fixed covariance parameters
