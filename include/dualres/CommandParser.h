@@ -48,7 +48,7 @@ namespace dualres {
     bool help_invoked() const;
     bool monitor() const;
     operator bool() const;
-    bool operator!() const;;
+    bool operator!() const;
     int mcmc_burnin() const;
     int mcmc_leapfrog_steps() const;
     int mcmc_nsave() const;

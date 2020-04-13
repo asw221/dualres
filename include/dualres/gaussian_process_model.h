@@ -137,11 +137,6 @@ namespace dualres {
 	const auto stop = std::chrono::high_resolution_clock::now();
 	posterior_summary.sampling_time(stop - start);
 	posterior_summary.metropolis_hastings_rate(_hmc_.metropolis_hastings_rate());
-	std::cout << "Sampling took " << posterior_summary.sampling_time() << " (sec)"
-		  << std::endl;
-	std::cout << "Metropolis-Hastings rate was "
-		  << (_hmc_.metropolis_hastings_rate() * 100)
-		  << "%" << std::endl;
 	return posterior_summary;
       };
 
