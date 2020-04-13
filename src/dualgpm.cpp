@@ -6,6 +6,7 @@
 #include <iostream>
 #include <nifti1_io.h>
 #include <sstream>
+#include <stdio.h>
 #include <stdexcept>
 #include <vector>
 
@@ -84,9 +85,11 @@ int main(int argc, char *argv[]) {
 
   
   std::ofstream mcmc_samples_stream(_output_file_samples.c_str());
-
+  if (_output_file_mean != inputs.highres_file())
+    remove(_output_file_mean.c_str());
+  if (_output_file_variance != inputs.highres_file())
+    remove(_output_file_variance.c_str());
   
-
 
   try {
     _high_res_ = nifti_image_read(inputs.highres_file().c_str(), 1);

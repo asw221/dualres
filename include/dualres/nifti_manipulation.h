@@ -237,7 +237,7 @@ namespace dualres {
     ScalarType voxel_value;
     for (int i = 0; i < nvox; i++) {
       voxel_value = *(data_ptr + i);
-      if (!(isnan(voxel_value) || voxel_value != 0))  count++;
+      if (!(isnan(voxel_value) || voxel_value == 0))  count++;
     }
     return count;
   };
@@ -268,7 +268,7 @@ namespace dualres {
     ScalarType voxel_value;
     for (int i = 0, j = 0; i < nvox && j < nzdat.size(); i++) {
       voxel_value = (*nii_ptr);
-      if (!(isnan(voxel_value) || voxel_value != 0)) {
+      if (!(isnan(voxel_value) || voxel_value == 0)) {
 	(*nii_ptr) = (ScalarType)nzdat[j];
 	j++;
       }

@@ -54,7 +54,7 @@ namespace dualres {
     int mcmc_nsave() const;
     int mcmc_thin() const;
     int threads() const;
-    scalar_type neighborhood() const
+    scalar_type neighborhood() const;
     std::string highres_file() const;
     std::string output_file_base() const;
     std::string output_file(const std::string &extension) const;
