@@ -20,7 +20,7 @@ namespace dualres {
   dualres::__internals::path fftw_wisdom_file();
   dualres::__internals::rng_type& rng();
   
-  int set_number_of_threads(const unsigned int threads);
+  int set_number_of_threads(const int threads);
   int threads();
   
   void set_seed(const unsigned int seed);

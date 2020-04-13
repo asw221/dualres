@@ -32,7 +32,9 @@ namespace dualres {
 
     typedef std::mt19937 rng_type;
     typedef boost::filesystem::path path;
-    
+
+
+    bool _MONITOR_ = false;
 
     const int _MAX_THREADS_ = std::thread::hardware_concurrency();
     int _N_THREADS_ = std::max(_MAX_THREADS_ * 4 / 5, 1);

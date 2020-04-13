@@ -46,37 +46,40 @@ namespace dualres {
     GPMCommandParser(int argc, char **argv);
     bool error() const;
     bool help_invoked() const;
+    bool monitor() const;
     operator bool() const;
-    bool operator!() const;
-    scalar_type neighborhood() const;
+    bool operator!() const;;
+    int mcmc_burnin() const;
+    int mcmc_leapfrog_steps() const;
+    int mcmc_nsave() const;
+    int mcmc_thin() const;
+    int threads() const;
+    scalar_type neighborhood() const
     std::string highres_file() const;
     std::string output_file_base() const;
     std::string output_file(const std::string &extension) const;
     std::string stdres_file() const;
-    unsigned int mcmc_burnin() const;
-    unsigned int mcmc_leapfrog_steps() const;
-    unsigned int mcmc_nsave() const;
-    unsigned int mcmc_thin() const;
     unsigned int seed() const;
-    unsigned int threads() const;
     typename std::vector<scalar_type> covariance_parameters() const;
     typename std::vector<scalar_type>::iterator covariance_begin();
     typename std::vector<scalar_type>::iterator covariance_end();
 
+    void show_help() const;
     void show_usage() const;
     
   private:
+    bool _monitor;
     call_status _status;
+    int _mcmc_burnin;
+    int _mcmc_leapfrog_steps;
+    int _mcmc_nsave;
+    int _mcmc_thin;
+    int _threads;
     scalar_type _neighborhood;
     std::string _highres_file;
     std::string _output_base;
     std::string _stdres_file;
-    unsigned int _mcmc_burnin;
-    unsigned int _mcmc_leapfrog_steps;
-    unsigned int _mcmc_nsave;
-    unsigned int _mcmc_thin;
     unsigned int _seed;
-    unsigned int _threads;
     std::vector<scalar_type> _covariance_params;
   };
 
@@ -152,7 +155,7 @@ namespace dualres {
     bool help_invoked() const;
     bool native_grid() const;
     bool operator!() const;
-    unsigned int threads() const;
+    int threads() const;
     std::string image_file() const;
     operator bool() const;
 
@@ -161,7 +164,7 @@ namespace dualres {
   private:
     call_status _status;
     fftw_flags _planner_flag;
-    unsigned int _threads;
+    int _threads;
     std::string _image_file;
   };
   

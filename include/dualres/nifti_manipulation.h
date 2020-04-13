@@ -2,6 +2,7 @@
 #include <Eigen/Core>
 #include <nifti1_io.h>
 #include <string>
+#include <stdexcept>
 #include <vector>
 
 #include "dualres/defines.h"
@@ -128,6 +129,7 @@ namespace dualres {
     Eigen::Vector3i ijk_min;
     Eigen::Vector3i ijk_max;
     int nnz;
+    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
   };
 
 
@@ -251,6 +253,41 @@ namespace dualres {
     
     // Not reached:
     return 0;
+  };
+
+
+
+
+  template< typename ScalarType = float, typename DataType >
+  void emplace_nonzero_data_impl(
+    nifti_image* nii,
+    const Eigen::Matrix<DataType, Eigen::Dynamic, 1> &nzdat
+  ) {
+    const int nvox = (int)nii->nvox;
+    ScalarType* nii_ptr = (ScalarType*)nii->data;
+    ScalarType voxel_value;
+    for (int i = 0, j = 0; i < nvox && j < nzdat.size(); i++) {
+      voxel_value = (*nii_ptr);
+      if (!(isnan(voxel_value) || voxel_value != 0)) {
+	(*nii_ptr) = (ScalarType)nzdat[j];
+	j++;
+      }
+      ++nii_ptr;
+    }
+  };
+
+
+  template< typename DataType >
+  void emplace_nonzero_data(
+    nifti_image* nii,
+    const Eigen::Matrix<DataType, Eigen::Dynamic, 1> &nzdat
+  ) {
+    if (dualres::nii_data_type(nii) == dualres::nifti_data_type::FLOAT)
+      dualres::emplace_nonzero_data_impl<float, DataType>(nii, nzdat);
+    else if (dualres::nii_data_type(nii) == dualres::nifti_data_type::DOUBLE)
+      dualres::emplace_nonzero_data_impl<double, DataType>(nii, nzdat);
+    else
+      throw std::logic_error("emplace_nonzero_data: unrecognized image data type");
   };
 
   

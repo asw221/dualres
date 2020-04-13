@@ -7,7 +7,8 @@
 
 template< typename T >
 void dualres::NeighborhoodCommandParser<T>::show_usage() const {
-  std::cout << "Placeholder help for neighborhood methods\n";
+  std::cerr << "\nUsage:\n"
+	    << "\trbf_neighbhorood rho --covariance f1 f2 f3";
 };
 
 
@@ -31,7 +32,7 @@ dualres::NeighborhoodCommandParser<T>::NeighborhoodCommandParser(int argc, char 
       if ((arg == "-h") || (arg == "--help")) {
 	_status = call_status::help;
       }
-      else if (arg == "--theta" || arg == "--kernel") {
+      else if (arg == "--theta" || arg == "--covariance") {
 	if ((i + K) <= argc) {
 	  try {
 	    for (int j = 0; j < K; j++) {
@@ -40,13 +41,13 @@ dualres::NeighborhoodCommandParser<T>::NeighborhoodCommandParser(int argc, char 
 	    }
 	  }
 	  catch (...) {
-	    std::cerr << "\nWarning: --theta option requires"
+	    std::cerr << "\nWarning: --covariance option requires"
 		      << K << " numeric arguments\n";
 	    _status = call_status::error;
 	  }
 	}
 	else {
-	  std::cerr << "\nWarning: --theta option requires 3 numeric arguments\n";
+	  std::cerr << "\nWarning: --covariance option requires 3 numeric arguments\n";
 	  _status = call_status::error;
 	}
       }

@@ -2,6 +2,7 @@
 #include <algorithm>
 #include <math.h>
 #include <random>
+#include <stdexcept>
 
 #include "dualres/defines.h"
 
@@ -20,10 +21,10 @@ namespace dualres {
     typedef RealType value_type;
 
     HMCParameters(
-      const unsigned int burnin = 1000,
-      const unsigned int n_save = 500,
-      const unsigned int thin = 1,
-      const unsigned int integrator_steps = 10,
+      const int burnin = 1000,
+      const int n_save = 500,
+      const int thin = 1,
+      const int integrator_steps = 10,
       const value_type starting_eps = 0.1,
       const value_type mh_target = 0.65,
       const value_type gamma = 0.05,
@@ -34,12 +35,12 @@ namespace dualres {
 
     bool save_iteration() const;
     
-    unsigned int burnin_iterations() const;
-    unsigned int integrator_steps() const;
-    unsigned int iteration() const;
-    unsigned int max_iterations() const;
-    unsigned int n_save() const;
-    unsigned int thin_iterations() const;
+    int burnin_iterations() const;
+    int integrator_steps() const;
+    int iteration() const;
+    int max_iterations() const;
+    int n_save() const;
+    int thin_iterations() const;
     
     value_type eps() const;
     value_type eps_value() const;
@@ -54,11 +55,11 @@ namespace dualres {
     bool _warmup;
     bool _eps_start_found;
     
-    unsigned int _burnin;
-    unsigned int _integrator_steps;
-    unsigned int _iteration;
-    unsigned int _n_save;
-    unsigned int _thin;
+    int _burnin;
+    int _integrator_steps;
+    int _iteration;
+    int _n_save;
+    int _thin;
 
     double _A;
     double _eps;
@@ -82,26 +83,35 @@ namespace dualres {
 
 template< typename RealType >
 dualres::HMCParameters<RealType>::HMCParameters(
-  const unsigned int burnin,
-  const unsigned int n_save,
-  const unsigned int thin,
-  const unsigned int integrator_steps,
+  const int burnin,
+  const int n_save,
+  const int thin,
+  const int integrator_steps,
   const dualres::HMCParameters<RealType>::value_type starting_eps,
   const dualres::HMCParameters<RealType>::value_type mh_target,
   const dualres::HMCParameters<RealType>::value_type gamma,
   const dualres::HMCParameters<RealType>::value_type t0,
   const dualres::HMCParameters<RealType>::value_type kappa
 ) {
+  if (burnin < 0)
+    throw std::domain_error("HMCParameters: burnin must be >= 0");
+  if (n_save < 0)
+    throw std::domain_error("HMCParameters: n_save must be >= 0");
+  if (thin < 0)
+    throw std::domain_error("HMCParameters: thin must be >= 0");
+  if (integrator_steps <= 0)
+    throw std::domain_error("HMCParameters: integrator_steps must be > 0");
+  
   if (starting_eps <= 0)
-    throw std::logic_error("HMCParameters: starting_eps must be > 0");
+    throw std::domain_error("HMCParameters: starting_eps must be > 0");
   if (mh_target <= 0 || mh_target >= 1)
-    throw std::logic_error("HMCParameters: mh_target should be within (0, 1)");
+    throw std::domain_error("HMCParameters: mh_target should be within (0, 1)");
   if (gamma <= 0 || gamma >= 1)
-    throw std::logic_error("HMCParameters: gamma should be within (0, 1)");
+    throw std::domain_error("HMCParameters: gamma should be within (0, 1)");
   if (t0 < 0)
-    throw std::logic_error("HMCParameters: t0 should be >= 0");
+    throw std::domain_error("HMCParameters: t0 should be >= 0");
   if (kappa <= 0 || kappa >= 1)
-    throw std::logic_error("HMCParameters: kappa should be within (0, 1)");
+    throw std::domain_error("HMCParameters: kappa should be within (0, 1)");
   
   _warmup = burnin > 0;
   _eps_start_found = !_warmup;
@@ -110,7 +120,7 @@ dualres::HMCParameters<RealType>::HMCParameters(
   _integrator_steps = integrator_steps;
   _iteration = 0;
   _n_save = n_save;
-  _thin = thin;
+  _thin = (thin == 0) ? 1 : thin;
 
   _A = 1;
   _eps = starting_eps;
@@ -138,14 +148,14 @@ bool dualres::HMCParameters<RealType>::save_iteration() const {
 
 
 template< typename RealType > 
-unsigned int dualres::HMCParameters<RealType>::burnin_iterations() const {
+int dualres::HMCParameters<RealType>::burnin_iterations() const {
   return _burnin;
 };
 
 
 
 template< typename RealType > 
-unsigned int dualres::HMCParameters<RealType>::integrator_steps() const {
+int dualres::HMCParameters<RealType>::integrator_steps() const {
   // if (!_eps_start_found)
   //   return 1;
   // else
@@ -156,7 +166,7 @@ unsigned int dualres::HMCParameters<RealType>::integrator_steps() const {
 
 
 template< typename RealType > 
-unsigned int dualres::HMCParameters<RealType>::iteration() const {
+int dualres::HMCParameters<RealType>::iteration() const {
   return _iteration;
 };
 
@@ -164,21 +174,21 @@ unsigned int dualres::HMCParameters<RealType>::iteration() const {
 
 
 template< typename RealType > 
-unsigned int dualres::HMCParameters<RealType>::max_iterations() const {
+int dualres::HMCParameters<RealType>::max_iterations() const {
   return _burnin + _thin * _n_save;
 };
 
 
 
 template< typename RealType > 
-unsigned int dualres::HMCParameters<RealType>::n_save() const {
+int dualres::HMCParameters<RealType>::n_save() const {
   return _n_save;
 };
 
 
 
 template< typename RealType > 
-unsigned int dualres::HMCParameters<RealType>::thin_iterations() const {
+int dualres::HMCParameters<RealType>::thin_iterations() const {
   return _thin;
 };
 

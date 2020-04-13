@@ -11,5 +11,9 @@
  
  
 #### To-do
+ - Enhance comments and help pages
+ - RBF parameter estimation: add option for fixed covariance parameters
  - Convenient interface to check proportion of positive eigen values
    for given kernel function/image space
+ - Add utility to convert image data types (double -> float) or vice
+   versa

@@ -8,7 +8,8 @@
 
 template< typename T >
 void dualres::FFTWWisdomCommandParser<T>::show_usage() const {
-  std::cerr << "FFTWWisdom: help-page placeholder\n";
+  std::cerr  << "\nUsage:\n"
+	     << "\tpreplan_fft path/to/img <options>\n\n";
 };
 
 
@@ -40,7 +41,7 @@ dualres::FFTWWisdomCommandParser<T>::FFTWWisdomCommandParser(int argc, char* arg
 	if (i + 1 < argc) {
 	  i++;
 	  try {
-	    _threads = (unsigned)std::abs(std::stoi(argv[i]));
+	    _threads = std::abs(std::stoi(argv[i]));
 	  }
 	  catch (...) {
 	    std::cerr << _MESSAGE_IMPROPER_THREADS;
@@ -115,7 +116,7 @@ bool dualres::FFTWWisdomCommandParser<T>::operator!() const {
 
 
 template< typename T >
-unsigned int dualres::FFTWWisdomCommandParser<T>::threads() const {
+int dualres::FFTWWisdomCommandParser<T>::threads() const {
   return _threads;
 };
 

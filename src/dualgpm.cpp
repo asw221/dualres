@@ -5,6 +5,8 @@
 #include <iomanip>
 #include <iostream>
 #include <nifti1_io.h>
+#include <sstream>
+#include <stdexcept>
 #include <vector>
 
 #include "dualres/CommandParser.h"
@@ -71,100 +73,183 @@ int main(int argc, char *argv[]) {
   
   nifti_image* _high_res_;
   nifti_image* _std_res_;
-
-  _high_res_ = nifti_image_read(inputs.highres_file().c_str(), 1);
-  if (_standard_resolution_available) {
-    _std_res_ = nifti_image_read(inputs.stdres_file().c_str(), 1);
-    
-    if (!dualres::same_data_types(_high_res_, _std_res_)) {
-      std::cerr << "Cannot mix image data types!";
-      return 1;
-    }
-  }
-
+  
+  dualres::MultiResData<scalar_type> _data_;
+  dualres::HMCParameters<scalar_type> _hmc_;
   
   std::vector<scalar_type> _covar_params = inputs.covariance_parameters();
-  // If covar parameters are not given, estimate them from inputs. Use
-  // Std Res image first if available
-  if (_standard_resolution_available) {
-    if (!compute_covar_parameters_if_needed(_covar_params, _std_res_))  return 1;
-  }
-  else if (!compute_covar_parameters_if_needed(_covar_params, _high_res_)) {
-    return 1;
-  }
-  if (!valid_covar_parameters(_covar_params))  return 1;
-    
 
-  // If the (mm) neighborhood is not given, compute it from the covar
-  // parameters assuming sparsity after a cuttoff level of 0.1
-  if (neighborhood <= 0) {
-    // neighborhood = dualres::kernels::rbf_inverse(
-    //   (scalar_type)0.1, covar_params[1], covar_params[2], covar_params[0]);
-    neighborhood = 3 * (scalar_type)dualres::voxel_dimensions(
-      dualres::qform_matrix(_high_res_)).array().maxCoeff();
-  }
-    
-  std::cout << "High-resolution file: " << inputs.highres_file()
-	    << std::endl;
-  if (_standard_resolution_available)
-    std::cout << "Standard-resolution file: " << inputs.stdres_file()
-	      << std::endl;
+  bool error_status = false;
+  std::ostringstream error_stream;
 
-  std::cout << "\nCovariance parameters: ("
-	    << _covar_params[0] << ", " << _covar_params[1] << ", "
-	    << _covar_params[2] << ")\n";
-  if (_standard_resolution_available) {
-    std::cout << "Neighborhood: " << neighborhood << " (mm)\n";
-  }
-  std::cout << "\nMCMC settings:"
-	    << "\nBurnin   = " << inputs.mcmc_burnin()
-	    << "\nNSave    = " << inputs.mcmc_nsave()
-	    << "\nThin     = " << inputs.mcmc_thin()
-	    << "\nLeapfrog = " << inputs.mcmc_leapfrog_steps()
-	    << "\n" << std::endl;
-
+  
+  std::ofstream mcmc_samples_stream(_output_file_samples.c_str());
 
   
 
 
-  dualres::HMCParameters<scalar_type> _hmc_(
-    inputs.mcmc_burnin(), inputs.mcmc_nsave(), inputs.mcmc_thin(),
-    inputs.mcmc_leapfrog_steps()
-  );
+  try {
+    _high_res_ = nifti_image_read(inputs.highres_file().c_str(), 1);
+    std::cout << "High-resolution file: " << inputs.highres_file()
+	      << std::endl;
+    
+
+    if (!mcmc_samples_stream) {
+      error_status = true;
+      error_stream << "Error: will not be able to write output to\n  "
+		   << _output_file_mean;
+      throw std::runtime_error(error_stream.str());
+    }
+    
+    
+    if (_standard_resolution_available) {
+      _std_res_ = nifti_image_read(inputs.stdres_file().c_str(), 1);
+      std::cout << "Standard-resolution file: " << inputs.stdres_file()
+		<< std::endl;
+    
+      if (!dualres::same_data_types(_high_res_, _std_res_)) {
+	// Actually don't think this should result in an error
+	error_status = true;
+	error_stream << "Error: " << inputs.highres_file() << " and "
+		     << inputs.stdres_file()
+		     << " have different data types\n";
+	throw std::domain_error(error_stream.str());
+      }
+    
+      // If covar parameters are not given, estimate them from inputs. Use
+      // Std Res image first if available  
+      if (!compute_covar_parameters_if_needed(_covar_params, _std_res_)) {
+	error_status = true;
+	error_stream << "Error: could not compute covariance parameters from "
+		     << inputs.stdres_file() << "\n";
+	throw std::runtime_error(error_stream.str());
+      }
+
+      
+
+      // If the (mm) neighborhood is not given, compute it from the covar
+      // parameters assuming sparsity after a cuttoff level of 0.1
+      //  - Only relevant for multi-resolution models
+      if (neighborhood <= 0) {
+	// neighborhood = dualres::kernels::rbf_inverse(
+	//   (scalar_type)0.1, covar_params[1], covar_params[2], covar_params[0]);
+	neighborhood = 3 * (scalar_type)dualres::voxel_dimensions(
+          dualres::qform_matrix(_high_res_)).array().maxCoeff();
+      }
+      std::cout << "Neighborhood: " << neighborhood << " (mm)\n";
+      
+    }  // if (_standard_resolution_available)
+
+    
+    if (!compute_covar_parameters_if_needed(_covar_params, _high_res_)) {
+	error_status = true;
+	error_stream << "Error: could not compute covariance parameters from "
+		     << inputs.highres_file() << "\n";
+	throw std::runtime_error(error_stream.str());
+    }
+    if (!valid_covar_parameters(_covar_params)) {
+      error_status = true;
+      error_stream << "Error: covariance parameters are not valid (";
+      for (int i = 0; i < _covar_params.size(); i++) {
+	error_stream << _covar_params[i];
+	if (i < (_covar_params.size() - 1))  error_stream << ", ";
+      }
+      error_stream << ")\n";
+      throw std::domain_error(error_stream.str());
+    }
 
 
-  dualres::MultiResData<scalar_type> _data_;  
-  if (!_standard_resolution_available) {
-    _data_ = dualres::MultiResData<scalar_type>(
-      _high_res_, _covar_params);
-  }
-  else {
-    _data_ = dualres::MultiResData<scalar_type>(
-      _high_res_, _std_res_, _covar_params, neighborhood);
-  }
-  // _data_.print_summary();
+    _hmc_ = dualres::HMCParameters<scalar_type>(
+      inputs.mcmc_burnin(), inputs.mcmc_nsave(), inputs.mcmc_thin(),
+      inputs.mcmc_leapfrog_steps()
+      );
+    std::cout << "\nMCMC settings:"
+	      << "\n-----------------"
+	      << "\nBurnin   = " << inputs.mcmc_burnin()
+	      << "\nNSave    = " << inputs.mcmc_nsave()
+	      << "\nThin     = " << inputs.mcmc_thin()
+	      << "\nLeapfrog = " << inputs.mcmc_leapfrog_steps()
+	      << "\n-----------------"
+	      << std::endl;
 
 
-  std::ofstream mcmc_samples_file(_output_file_samples.c_str());
-  if (mcmc_samples_file) {
+    if (!_standard_resolution_available) {
+      _data_ = dualres::MultiResData<scalar_type>(
+        _high_res_, _covar_params);
+    }
+    else {
+      _data_ = dualres::MultiResData<scalar_type>(
+        _high_res_, _std_res_, _covar_params, neighborhood);
 
+      // Clear Standard Resolution data file after importing to _data_
+      nifti_image_free(_std_res_);
+    }
+    // _data_.print_summary();
+
+    
+
+    // Fit model
     dualres::gaussian_process::sor_approx::mcmc_summary<scalar_type>
-  model_output = dualres::gaussian_process::sor_approx::fit_model
-    <scalar_type>(_high_res_, _data_, _hmc_, mcmc_samples_file);
+      model_output = dualres::gaussian_process::sor_approx::fit_model
+      <scalar_type>(_high_res_, _data_, _hmc_, mcmc_samples_stream);
 
-    mcmc_samples_file.close();
-  }
-  else {
-    std::cerr << "Could not write MCMC samples to file:\n"
-	      << "\t" << _output_file_samples
+    mcmc_samples_stream.close();
+    std::cout << _output_file_samples << " written\n";
+
+    // Write output
+    // Posterior mean:
+    nifti_set_filenames(_high_res_, _output_file_mean.c_str(), 1, 1);
+    if (std::string(_high_res_->fname) != inputs.highres_file()) {
+      dualres::emplace_nonzero_data(_high_res_, model_output.mode_mu());
+      
+      nifti_image_write(_high_res_);
+      std::cout << _output_file_mean << " written\n";
+    }
+    else {
+      error_stream << "Warning: posterior mean image would overwrite data. "
+		   << "File not written\n";
+      std::cerr << error_stream.str();
+    }
+    
+    // Posterior variance:
+    nifti_set_filenames(_high_res_, _output_file_variance.c_str(), 1, 1);
+    if (std::string(_high_res_->fname) != inputs.highres_file()) {
+      dualres::emplace_nonzero_data(_high_res_, model_output.var_mu());
+      
+      nifti_image_write(_high_res_);
+      std::cout << _output_file_variance << " written\n";
+    }
+    else {
+      error_stream << "Warning: posterior variance image would overwrite data. "
+		   << "File not written\n";
+      std::cerr << error_stream.str();
+    }
+
+    
+    std::cout << "Sampling took " << model_output.sampling_time() << " (sec)\n"
+	      << "Metropolis-Hastings rate was "
+	      << (model_output.metropolis_hastings_rate() * 100)
+	      << "%" << std::endl;
+
+    // 
+    nifti_image_free(_high_res_);
+  }  // try ...
+  catch (const std::exception &__err) {
+    std::cerr << "Exception caught with message:\n'"
+	      << __err.what() << "'\n"
 	      << std::endl;
   }
-  
+  catch (...) {
+    error_status = true;
+    std::cerr << "Unknown error\n";
+  }
 
-  // Finish by calling  nifti_image_free()
-  nifti_image_free(_high_res_);
-  if (_standard_resolution_available)  nifti_image_free(_std_res_);
+
+
+  // Finish by calling  fftw_cleanup_threads()
   fftwf_cleanup_threads();
+  if (error_status)
+    return 1;
 }
 
 

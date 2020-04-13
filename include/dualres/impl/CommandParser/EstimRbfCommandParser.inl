@@ -8,7 +8,8 @@
 
 template< typename T >
 void dualres::EstimRbfCommandParser<T>::show_usage() const {
-  std::cout << "Placeholder help for estimateRbfParameters\n";
+  std::cerr << "\nUsage:\n"
+	    << "\testimate_rbf path/to/img\n\n";
 };
 
 

@@ -128,8 +128,10 @@ namespace dualres {
 	    posterior_summary.update(mu, sigma, log_posterior);
 	    save_count++;
 	  }
-	  pb++;
-	  // std::cout << pb;
+	  if (!dualres::__internals::_MONITOR_) {
+	    pb++;
+	    std::cout << pb;
+	  }
 	}
 	pb.finish();
 	const auto stop = std::chrono::high_resolution_clock::now();

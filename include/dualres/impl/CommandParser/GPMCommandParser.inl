@@ -15,11 +15,20 @@
 template< typename T >
 void dualres::GPMCommandParser<T>::show_usage() const {
   std::cerr << "\nUsage:\n"
+	    << "\tdualgpm --highres path/to/img1 <options>\n\n";
+};
+
+
+template< typename T >
+void dualres::GPMCommandParser<T>::show_help() const {
+  show_usage();
+  std::cerr << "\nUsage:\n"
 	    << "\tdualgpm --highres path/to/img1 <options>\n\n"
 	    << "Options:\n"
 	    << "\t--burnin   int  number of MCMC burnin iterations\n"
 	    << "\t--covariance   f1 f2 f3  Gaussian process covariance parameters\n"
 	    << "\t--leapfrog int  number of MCMC integrator steps\n"
+	    << "\t--monitor       ~~NOT IMPLEMENTED~~\n"
 	    << "\t--neighborhood f1  neighborhood size (mm) for kriging approximation\n"
 	    << "\t--nsave    int  number of MCMC samples to save in output\n"
 	    << "\t--output   file/basename  valid path prefix for output files\n"
@@ -53,6 +62,7 @@ dualres::GPMCommandParser<T>::GPMCommandParser(int argc, char* argv[]) {
   _mcmc_leapfrog_steps = 10;
   _mcmc_nsave = 1000;
   _mcmc_thin = 1;
+  _monitor = false;
   _seed = static_cast<unsigned int>(
     std::chrono::duration_cast<std::chrono::milliseconds>(time).count());
   _seed = std::max(_seed, (unsigned)1);
@@ -93,12 +103,13 @@ dualres::GPMCommandParser<T>::GPMCommandParser(int argc, char* argv[]) {
       std::string arg = argv[i];
       if ((arg == "-h") || (arg == "--help")) {
 	_status = call_status::help;
+	break;
       }
       else if (arg == "--burnin") {
 	if (i + 1 < argc) {
 	  i++;
 	  try {
-	    _mcmc_burnin = (unsigned)std::max(std::abs(std::stoi(argv[i])), 1);
+	    _mcmc_burnin = std::max(std::abs(std::stoi(argv[i])), 1);
 	  }
 	  catch (...) {
 	    std::cerr << _MESSAGE_IMPROPER_BURNIN;
@@ -149,7 +160,7 @@ dualres::GPMCommandParser<T>::GPMCommandParser(int argc, char* argv[]) {
 	if (i + 1 < argc) {
 	  i++;
 	  try {
-	    _mcmc_leapfrog_steps = (unsigned)std::max(std::abs(std::stoi(argv[i])), 1);
+	    _mcmc_leapfrog_steps = std::max(std::abs(std::stoi(argv[i])), 1);
 	  }
 	  catch (...) {
 	    std::cerr << _MESSAGE_IMPROPER_LEAPFROG;
@@ -160,6 +171,9 @@ dualres::GPMCommandParser<T>::GPMCommandParser(int argc, char* argv[]) {
 	  std::cerr << _MESSAGE_IMPROPER_LEAPFROG;
 	  _status = call_status::error;
 	}
+      }
+      else if (arg == "--monitor") {
+	_monitor = true;
       }
       else if (arg == "--neighborhood") {
 	if (i + 1 < argc) {
@@ -181,7 +195,7 @@ dualres::GPMCommandParser<T>::GPMCommandParser(int argc, char* argv[]) {
 	if (i + 1 < argc) {
 	  i++;
 	  try {
-	    _mcmc_nsave = (unsigned)std::max(std::abs(std::stoi(argv[i])), 1);
+	    _mcmc_nsave = std::max(std::abs(std::stoi(argv[i])), 1);
 	  }
 	  catch (...) {
 	    std::cerr << _MESSAGE_IMPROPER_NSAVE;
@@ -238,7 +252,7 @@ dualres::GPMCommandParser<T>::GPMCommandParser(int argc, char* argv[]) {
 	if (i + 1 < argc) {
 	  i++;
 	  try {
-	    _mcmc_thin = (unsigned)std::max(std::abs(std::stoi(argv[i])), 1);
+	    _mcmc_thin = std::max(std::abs(std::stoi(argv[i])), 1);
 	  }
 	  catch (...) {
 	    std::cerr << _MESSAGE_IMPROPER_THIN;
@@ -254,7 +268,7 @@ dualres::GPMCommandParser<T>::GPMCommandParser(int argc, char* argv[]) {
 	if (i + 1 < argc) {
 	  i++;
 	  try {
-	    _threads = (unsigned)std::abs(std::stoi(argv[i]));
+	    _threads = std::abs(std::stoi(argv[i]));
 	  }
 	  catch (...) {
 	    std::cerr << _MESSAGE_IMPROPER_THREADS;
@@ -276,12 +290,14 @@ dualres::GPMCommandParser<T>::GPMCommandParser(int argc, char* argv[]) {
       }
     }  // for (int i = 1; i < argc; i++)
   }
-  if (_highres_file.empty()) {
-    std::cerr << "\nError: User must supply the --highres argumentn\n";
+  if (help_invoked()) {
+    show_help();
+  }
+  else if (_highres_file.empty()) {
+    std::cerr << "\nError: User must supply the --highres argument\n";
     _status = call_status::error;
   }
   if (error())  std::cerr << "\nSee dualgpm --help for more information\n";
-  if (help_invoked())  show_usage();
 };
 
 
@@ -300,6 +316,11 @@ bool dualres::GPMCommandParser<T>::help_invoked() const {
   return _status == call_status::help;
 };
 
+template< typename T >
+bool dualres::GPMCommandParser<T>::monitor() const {
+  return _monitor;
+};
+  
 template< typename T >
 dualres::GPMCommandParser<T>::operator bool() const {
   return !error();
@@ -340,38 +361,38 @@ std::string dualres::GPMCommandParser<T>::stdres_file() const {
 
 
 template< typename T >
-unsigned int dualres::GPMCommandParser<T>::mcmc_burnin() const {
+int dualres::GPMCommandParser<T>::mcmc_burnin() const {
   return _mcmc_burnin;
 };
 
 
 template< typename T >
-unsigned int dualres::GPMCommandParser<T>::mcmc_leapfrog_steps() const {
+int dualres::GPMCommandParser<T>::mcmc_leapfrog_steps() const {
   return _mcmc_leapfrog_steps;
 };
 
 
 template< typename T >
-unsigned int dualres::GPMCommandParser<T>::mcmc_nsave() const {
+int dualres::GPMCommandParser<T>::mcmc_nsave() const {
   return _mcmc_nsave;
 };
 
 
 template< typename T >
-unsigned int dualres::GPMCommandParser<T>::mcmc_thin() const {
+int dualres::GPMCommandParser<T>::mcmc_thin() const {
   return _mcmc_thin;
+};
+
+
+template< typename T >
+int dualres::GPMCommandParser<T>::threads() const {
+  return _threads;
 };
 
 
 template< typename T >
 unsigned int dualres::GPMCommandParser<T>::seed() const {
   return _seed;
-};
-
-
-template< typename T >
-unsigned int dualres::GPMCommandParser<T>::threads() const {
-  return _threads;
 };
 
 

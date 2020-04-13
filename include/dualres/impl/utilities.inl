@@ -24,9 +24,9 @@ dualres::__internals::rng_type& dualres::rng() {
 };
 
 
-int dualres::set_number_of_threads(const unsigned int threads) {
+int dualres::set_number_of_threads(const int threads) {
   if (threads > 0 && threads <= dualres::__internals::_MAX_THREADS_) {
-    dualres::__internals::_N_THREADS_ = (int)threads;
+    dualres::__internals::_N_THREADS_ = threads;
   }
   return dualres::__internals::_N_THREADS_;
 };

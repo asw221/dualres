@@ -8,8 +8,9 @@
 #include <iostream>
 #include <limits>
 #include <math.h>
-#include <omp.h>
+// #include <omp.h>
 #include <random>
+#include <stdexcept>
 #include <vector>
 
 #include "dualres/circulant_base.h"
@@ -24,7 +25,7 @@
 #define _DUALRES_MULTI_RES_PARAMETERS_2_
 
 
-namespace dualres {
+namespace dualres {  
 
     
 
@@ -38,7 +39,7 @@ namespace dualres {
     typedef typename Eigen::Matrix<scalar_type, Eigen::Dynamic, 1> VectorType;
     // typedef typename Eigen::SparseMatrix<scalar_type, Eigen::RowMajor> SparseMatrixType;
     // typedef typename Eigen::Array<scalar_type, Eigen::Dynamic, 1> ArrayType;
-    
+
 
     MultiResParameters(
       const int n_datasets,
@@ -137,7 +138,10 @@ namespace dualres {
       const typename dualres::MultiResData<scalar_type> &data,
       ComplexArrayType &mu_star
     );
-  };
+
+  public:
+    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+  };  // class MultiResParameters
 
   
 }
@@ -343,7 +347,8 @@ dualres::MultiResParameters<T>::_compute_gradient(
     throw std::logic_error("Gradient only implemented for single or dual resolution");
   }
   for (int i = 0; i < __lambda_grid_indices.size(); i++)
-    __temp_product[__lambda_grid_indices[i]] += complex_type(_real_sub_grad[i], 0);
+    __temp_product.coeffRef(__lambda_grid_indices.coeffRef(i)) +=
+      complex_type(_real_sub_grad.coeffRef(i), 0);
   return __temp_product;
 };
 
@@ -405,12 +410,16 @@ dualres::MultiResParameters<T>::_log_prior(
   );
   _low_rank_adjust(__temp_product);
 
-#pragma omp parallel for reduction(+ : __lp)
-  for (int i = 0; i < __temp_product.size(); i++)
+  // complex_type __lp =
+  //   dualres::compute_inverse_quadratic_with_complex_diagonal(
+  //     __temp_product, _lambda);
+
+  // #pragma omp parallel for reduction(+ : __lp)
+  for (int i = 0; i < __temp_product.size(); i++) {
     __lp += std::conj(__temp_product.coeffRef(i)) *
-      __temp_product.coeffRef(i) /
-      ( _lambda.coeffRef(i) * (scalar_type)_lambda.size() );
-  return -0.5 * __lp.real() / _lambda.size();
+      __temp_product.coeffRef(i) / _lambda.coeffRef(i);
+  }
+  return -0.5 * (__lp.real() + __lp.imag()) / _lambda.size();
 };
 
 
@@ -499,11 +508,21 @@ dualres::MultiResParameters<T>::_potential_energy() {
   );
   // _lambda_mass is already low-rank adjusted
 
+  // complex_type __pe = dualres::compute_quadratic_with_complex_diagonal(
+  //   __temp_product, _lambda_mass);
+
+
+  // Shockingly, the only way I can get the quadratic products to work is by
+  // using serial for loops. OpenMP/Eigen expressions don't seem to work
+  // 
   // #pragma omp parallel for reduction(+ : __pe)  // <- this one doesn't work
-  for (int i = 0; i < __temp_product.size(); i++)
+  for (int i = 0; i < __temp_product.size(); i++) {
     __pe += std::conj(__temp_product.coeffRef(i)) *
       _lambda_mass.coeffRef(i) * __temp_product.coeffRef(i);
-  return -0.5 * __pe.real() / _lambda_mass.size();
+  }
+  // __pe = (__temp_product.matrix().adjoint() *
+  // 	  (_lambda_mass * __temp_product).matrix())[0];
+  return -0.5 * (__pe.real() + __pe.imag()) / _lambda_mass.size();
 };
 
 
@@ -609,11 +628,14 @@ dualres::MultiResParameters<T>::update(
   // proposed_energy = _log_posterior(data, _mu_star) + _potential_energy();
   proposed_energy = lp_proposal + _potential_energy();
   R = std::exp(proposed_energy - _initial_energy);
-  std::cout << "Init. E: " << _initial_energy
-  	    << "\tProp. E: " << proposed_energy
-  	    << "\teps = " << eps
-  	    << "\tR = " << R
-  	    << std::endl;
+  if (dualres::__internals::_MONITOR_) {
+    std::cout << std::setprecision(4)
+	      << "Energy Transition (" << _initial_energy
+	      << " -> " << proposed_energy
+	      << ");  step size (" << eps
+	      << ");  MH = (" << R
+	      << ")" << std::endl;
+  }
   if (isnan(R))  R = 0;
   if (_Uniform(dualres::rng()) < R) {
     _mu = _mu_star;
@@ -652,8 +674,8 @@ void dualres::MultiResParameters<T>::_initialize_mu(
   // _mu = af::constant(0, _lambda.dims(), _ctype);
   _mu = ComplexArrayType(_lambda.size());
   for (int i = 0; i < _mu.size(); i++) {
-    _mu[i] = complex_type(__Standard_Gaussian(dualres::rng()),
-			  __Standard_Gaussian(dualres::rng()));
+    _mu.coeffRef(i) = complex_type(__Standard_Gaussian(dualres::rng()),
+				   __Standard_Gaussian(dualres::rng()));
   }
   fftwf_execute_dft(__backward_fft_plan,
     reinterpret_cast<fftwf_complex*>(_mu.data()),
@@ -695,9 +717,11 @@ template< typename T >
 void dualres::MultiResParameters<T>::_sample_momentum() {
   _initial_energy = 0;
   for (int i = 0; i < _momentum.size(); i++) {
-    _momentum[i] = complex_type(__Standard_Gaussian(dualres::rng()),
-				__Standard_Gaussian(dualres::rng()));
-    _initial_energy += ( std::conj(_momentum[i]) * _momentum[i] ).real();
+    _momentum.coeffRef(i) = complex_type(__Standard_Gaussian(dualres::rng()),
+					 __Standard_Gaussian(dualres::rng()));
+    _initial_energy += ( std::conj(_momentum.coeffRef(i)) *
+			 _momentum.coeffRef(i) ).real();
+    // imaginary part will always be 0
   }
   _initial_energy *= -0.5;
   fftwf_execute_dft(__backward_fft_plan,
@@ -778,3 +802,45 @@ void dualres::MultiResParameters<T>::_update_tau_sq_inv() {
 
 
 #endif  // _DUALRES_MULTI_RES_PARAMETERS_2_
+
+
+
+
+
+
+
+
+
+
+  /*
+  // Compute Adj(x) * Q * x, where x and Q are complex, and Q is diagonal
+  template< typename RealType >
+  std::complex<RealType> compute_quadratic_with_complex_diagonal(
+    const Eigen::Array<std::complex<RealType>, Eigen::Dynamic, 1> &x,
+    const Eigen::Array<std::complex<RealType>, Eigen::Dynamic, 1> &Q
+  ) {
+    const int N = x.size();
+    std::complex<RealType> __prod(0, 0);
+#pragma omp parallel for reduction(+ : __prod)
+    for (int i = 0; i < N; i++) {
+      __prod += std::conj(x.coeffRef(i)) * Q.coeffRef(i) * x.coeffRef(i);
+    }
+    return __prod;
+  };
+
+
+    // Compute Adj(x) * Q^-1 * x, where x and Q are complex, and Q is diagonal
+  template< typename RealType >
+  std::complex<RealType> compute_inverse_quadratic_with_complex_diagonal(
+    const Eigen::Array<std::complex<RealType>, Eigen::Dynamic, 1> &x,
+    const Eigen::Array<std::complex<RealType>, Eigen::Dynamic, 1> &Q
+  ) {
+    const int N = x.size();
+    std::complex<RealType> __prod(0, 0);
+#pragma omp parallel for reduction(+ : __prod)
+    for (int i = 0; i < N; i++) {
+      __prod += std::conj(x.coeffRef(i)) / Q.coeffRef(i) * x.coeffRef(i);
+    }
+    return __prod;
+  };
+  */

@@ -5,6 +5,7 @@
 #include <iomanip>
 #include <iostream>
 #include <nifti1_io.h>
+#include <stdexcept>
 #include <vector>
 
 #include "dualres/defines.h"

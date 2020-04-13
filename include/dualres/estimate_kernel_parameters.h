@@ -4,6 +4,7 @@
 #include <Eigen/Core>
 #include <nifti1_io.h>
 #include <nlopt.hpp>
+#include <stdexcept>
 #include <vector>
 
 #include "dualres/defines.h"
