@@ -54,6 +54,14 @@ set_target_properties(estimate_rbf PROPERTIES RUNTIME_OUTPUT_DIRECTORY
 		"${CMAKE_BINARY_DIR}/bin")
 
 
+## --- estimate_snr --------------------------------------------------
+add_executable(estimate_snr estimate_snr.cpp)
+target_link_libraries(estimate_snr Boost::filesystem Eigen3::Eigen
+		ZLIB::ZLIB libniftiio.a libznz.a)
+set_target_properties(estimate_snr PROPERTIES RUNTIME_OUTPUT_DIRECTORY
+		"${CMAKE_BINARY_DIR}/bin")
+
+
 ## --- gaussian_smooth -----------------------------------------------
 add_executable(gaussian_smooth gaussian_smooth.cpp)
 target_link_libraries(gaussian_smooth Boost::filesystem Eigen3::Eigen
@@ -66,8 +74,8 @@ set_target_properties(gaussian_smooth PROPERTIES
 add_executable(image_dimensions image_dimensions.cpp)
 target_link_libraries(image_dimensions Boost::filesystem Eigen3::Eigen
 		ZLIB::ZLIB libniftiio.a libznz.a)
-set_target_properties(estimate_rbf PROPERTIES RUNTIME_OUTPUT_DIRECTORY
-		"${CMAKE_BINARY_DIR}/bin")
+set_target_properties(image_dimensions PROPERTIES
+		RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
 
 
 ## --- preplan_fft ---------------------------------------------------

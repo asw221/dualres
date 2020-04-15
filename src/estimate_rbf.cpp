@@ -7,6 +7,8 @@
 
 #include "dualres/CommandParser.h"
 #include "dualres/estimate_kernel_parameters.h"
+#include "dualres/kernels.h"
+#include "dualres/nifti_manipulation.h"
 
 
 int main(int argc, char *argv[]) {
@@ -16,10 +18,10 @@ int main(int argc, char *argv[]) {
   else if (inputs.help_invoked())
     return 0;
 
-  nifti_image* __nii;
+  ::nifti_image* __nii;
   dualres::mce_data mce;
   try {
-    __nii = nifti_image_read(inputs.image_file().c_str(), 1);
+    __nii = dualres::nifti_image_read(inputs.image_file(), 1);
     std::cout << "Computing covariances across the image... " << std::flush;
   
     // Extract covariance/distance summary data
@@ -27,7 +29,7 @@ int main(int argc, char *argv[]) {
     std::cout << "Done!" << std::endl;
 
     // Cleanup
-    nifti_image_free(__nii);
+    ::nifti_image_free(__nii);
   }
   catch (...) {
     std::cerr << "Error computing minimum contrast data from file:\n\t"
@@ -74,7 +76,10 @@ int main(int argc, char *argv[]) {
   std::cout << "Done!" << std::endl;
   std::cout << "  Marg. Var. = " << theta[0] << "\n"
 	    << "  Bandwidth  = " << theta[1] << "\n"
-	    << "  Exponent   = " << theta[2]
+	    << "  Exponent   = " << theta[2] << "\n"
+	    << "  (FWHM      = "
+	    << dualres::kernels::rbf_bandwidth_to_fwhm(theta[1], theta[2])
+	    << ")\n"
 	    << std::endl;
   
 };

@@ -31,6 +31,15 @@ T dualres::kernels::rbf_inverse(
 
 
 
+template< typename T >
+T dualres::kernels::rbf_bandwidth_to_fwhm(
+  const T &bandwidth,
+  const T &exponent
+) {
+  return 2.0 * std::pow(std::log((T)2) / bandwidth, 1 / exponent);
+};
+
+
 
 template< typename T >
 T dualres::kernels::rbf_fwhm_to_bandwidth(

@@ -29,6 +29,9 @@ namespace dualres {
 
 
     template< typename T >
+    T rbf_bandwidth_to_fwhm(const T &bandwidth, const T &exponent = 1.9999);
+    
+    template< typename T >
     T rbf_fwhm_to_bandwidth(const T &fwhm, const T &exponent = 1.9999);
 
     

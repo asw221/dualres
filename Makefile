@@ -24,6 +24,9 @@ clear_fftw_history: $(SRCDIR)/clear_fftw_history.cpp
 estimate_rbf: $(SRCDIR)/estimate_rbf.cpp
 	$(CXX) $(CXXFLAGS) $(INC) $(LIB) -o $(EXECDIR)/estimate_rbf $<
 
+estimate_snr: $(SRCDIR)/estimate_snr.cpp
+	$(CXX) $(CXXFLAGS) $(INC) $(LIB) -o $(EXECDIR)/estimate_snr $<
+
 gaussian_smooth: $(SRCDIR)/gaussian_smooth.cpp
 	$(CXX) $(CXXFLAGS) $(INC) $(LIB) -o $(EXECDIR)/gaussian_smooth $<
 
@@ -35,3 +38,6 @@ preplan_fft: $(SRCDIR)/preplan_fft.cpp
 
 rbf_neighborhood: $(SRCDIR)/rbf_neighborhood.cpp
 	$(CXX) $(CXXFLAGS) $(INC) $(LIB) -o $(EXECDIR)/rbf_neighborhood $<
+
+simulate_data_from_image: $(SRCDIR)/simulate_data_from_image.cpp
+	$(CXX) $(CXXFLAGS) $(INC) $(LIB) -o $(EXECDIR)/simulate_data_from_image $<
