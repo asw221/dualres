@@ -24,6 +24,12 @@ clear_fftw_history: $(SRCDIR)/clear_fftw_history.cpp
 estimate_rbf: $(SRCDIR)/estimate_rbf.cpp
 	$(CXX) $(CXXFLAGS) $(INC) $(LIB) -o $(EXECDIR)/estimate_rbf $<
 
+gaussian_smooth: $(SRCDIR)/gaussian_smooth.cpp
+	$(CXX) $(CXXFLAGS) $(INC) $(LIB) -o $(EXECDIR)/gaussian_smooth $<
+
+image_dimensions: $(SRCDIR)/image_dimensions.cpp
+	$(CXX) $(CXXFLAGS) $(INC) $(LIB) -o $(EXECDIR)/image_dimensions $<
+
 preplan_fft: $(SRCDIR)/preplan_fft.cpp
 	$(CXX) $(CXXFLAGS) $(INC) $(LIB) -o $(EXECDIR)/preplan_fft $<
 

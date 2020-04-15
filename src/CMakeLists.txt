@@ -29,7 +29,6 @@ link_directories(${dualres_SOURCE_DIR}/lib/nifti/lib)
 
 ## --- dualgpm -------------------------------------------------------
 add_executable(dualgpm dualgpm.cpp)
-target_link_libraries(dualgpm )
 target_link_libraries(dualgpm Boost::filesystem FFTW::FloatOpenMP
 		FFTW::Float Eigen3::Eigen OpenMP::OpenMP_CXX
 		ZLIB::ZLIB libniftiio.a libznz.a)
@@ -51,6 +50,22 @@ add_executable(estimate_rbf estimate_rbf.cpp)
 target_link_libraries(estimate_rbf Boost::filesystem Eigen3::Eigen
 		NLOPT::nlopt ZLIB::ZLIB libniftiio.a libznz.a)
 		# zlib.dylib
+set_target_properties(estimate_rbf PROPERTIES RUNTIME_OUTPUT_DIRECTORY
+		"${CMAKE_BINARY_DIR}/bin")
+
+
+## --- gaussian_smooth -----------------------------------------------
+add_executable(gaussian_smooth gaussian_smooth.cpp)
+target_link_libraries(gaussian_smooth Boost::filesystem Eigen3::Eigen
+		ZLIB::ZLIB libniftiio.a libznz.a)
+set_target_properties(gaussian_smooth PROPERTIES
+		RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
+
+
+## --- image_dimensions ----------------------------------------------
+add_executable(image_dimensions image_dimensions.cpp)
+target_link_libraries(image_dimensions Boost::filesystem Eigen3::Eigen
+		ZLIB::ZLIB libniftiio.a libznz.a)
 set_target_properties(estimate_rbf PROPERTIES RUNTIME_OUTPUT_DIRECTORY
 		"${CMAKE_BINARY_DIR}/bin")
 

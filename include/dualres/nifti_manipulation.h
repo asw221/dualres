@@ -3,6 +3,7 @@
 #include <nifti1_io.h>
 #include <string>
 #include <stdexcept>
+#include <stdio.h>
 #include <vector>
 
 #include "dualres/defines.h"
@@ -18,37 +19,84 @@ namespace dualres {
   typedef Eigen::Matrix<float, 4, 4, Eigen::RowMajor> qform_type;
 
   
+  struct nifti_bounding_box {
+    Eigen::Vector3i ijk_min;
+    Eigen::Vector3i ijk_max;
+    int nnz;
+    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+  };
 
-  dualres::nifti_data_type nii_data_type(const nifti_image* const nii) {
+
+
+  ::nifti_image* nifti_image_read(const std::string &hname, int read_data) {
+    // ::nifti_image_read is defined in nifti1_io.h
+    const dualres::__internals::path _initial_path = dualres::current_path();
+    dualres::__internals::path hpath(hname);
+    dualres::current_path(hpath.parent_path());
+    ::nifti_image* _nii = ::nifti_image_read(hpath.filename().c_str(), read_data);
+    dualres::current_path(_initial_path);
+    return _nii;
+  };
+
+
+  void nifti_image_write(::nifti_image* nii, std::string new_filename = "") {
+    // ::nifti_image_write is defined in nifti1_io.h
+    const dualres::__internals::path _initial_path = dualres::current_path();
+    if (new_filename.empty()) {
+      new_filename = std::string(nii->fname);
+    }
+    dualres::__internals::path hpath(new_filename);
+    dualres::current_path(hpath.parent_path());
+    remove(hpath.c_str());
+    ::nifti_set_filenames(nii, hpath.filename().c_str(), 1, 1);
+    ::nifti_image_write(nii);
+    dualres::current_path(_initial_path);
+  };
+
+  
+
+  dualres::nifti_data_type nii_data_type(const ::nifti_image* const nii) {
     dualres::nifti_data_type __dt = dualres::nifti_data_type::OTHER;
     try {
       __dt = static_cast<dualres::nifti_data_type>(nii->datatype);
     }
     catch (...) { ; }
     return __dt;
-    
-    // if (nii->datatype == 16)
-    //   return dualres::nifti_data_type::FLOAT;
-    // else if (nii->datatype == 64)
-    //   return dualres::nifti_data_type::DOUBLE;
-    // else
-    //   return dualres::nifti_data_type::OTHER;
   };
 
 
 
   bool is_nifti_file(const std::string &fname) {
     // ::is_nifti_file defined in nifti1_io.h
-    return dualres::utilities::file_exists(fname) &&
-      (::is_nifti_file(fname.c_str()) == 1);
+    const dualres::__internals::path _initial_path = dualres::current_path();
+    dualres::__internals::path fpath(fname);
+    bool is_nifti = dualres::utilities::file_exists(fname);
+    if (is_nifti) {
+      dualres::current_path(fpath.parent_path());
+      is_nifti = (::is_nifti_file(fpath.filename().c_str()) == 1);
+      dualres::current_path(_initial_path);
+    }
+    return is_nifti;
+  };
+
+
+
+  bool is_float(const ::nifti_image* const nii) {
+    return dualres::nii_data_type(nii) ==
+      dualres::nifti_data_type::FLOAT;
+  };
+  
+  bool is_double(const ::nifti_image* const nii) {
+    return dualres::nii_data_type(nii) ==
+      dualres::nifti_data_type::DOUBLE;
   };
   
 
 
 
   bool same_data_types(
-    const nifti_image* const first_img,
-    const nifti_image* const second_img
+    const ::nifti_image* const first_img,
+    const ::nifti_image* const second_img
   ) {
     return (static_cast<dualres::nifti_data_type>(first_img->datatype) ==
 	    static_cast<dualres::nifti_data_type>(second_img->datatype));
@@ -57,7 +105,7 @@ namespace dualres {
   
   
 
-  dualres::qform_type qform_matrix(const nifti_image* const img) {
+  dualres::qform_type qform_matrix(const ::nifti_image* const img) {
     // Use of Eigen::Map means the nifti_image* input cannot be marked const
     // return Eigen::Map<dualres::qform_type>(&img->qto_xyz.m[0][0]);
     std::vector<float> m(16);
@@ -77,12 +125,12 @@ namespace dualres {
 
 
   
-  template< typename Scalar = float >
-  Eigen::MatrixXi get_nonzero_indices_impl(const nifti_image* const nii) {
+  template< typename ImageType = float >
+  Eigen::MatrixXi get_nonzero_indices_impl(const ::nifti_image* const nii) {
     if (nii->ndim < 3)
       throw std::logic_error("NIfTI image has dim < 3");
     const int nx = nii->nx, ny = nii->ny, nz = nii->nz, nvox = (int)nii->nvox;
-    Scalar* dataPtr = (Scalar*)nii->data;
+    ImageType* dataPtr = (ImageType*)nii->data;
     std::vector<int> indices;
     for (int i = 0; i < nvox; i++) {
       if (!(isnan(*dataPtr) || *dataPtr == 0)) {
@@ -104,13 +152,13 @@ namespace dualres {
 
 
   
-  Eigen::MatrixXi get_nonzero_indices(const nifti_image* const nii) {
-    if (dualres::nii_data_type(nii) == dualres::nifti_data_type::FLOAT)
+  Eigen::MatrixXi get_nonzero_indices(const ::nifti_image* const nii) {
+    if (dualres::is_float(nii))
       return dualres::get_nonzero_indices_impl<>(nii);
-    else if (dualres::nii_data_type(nii) == dualres::nifti_data_type::DOUBLE)
+    else if (dualres::is_double(nii))
       return dualres::get_nonzero_indices_impl<double>(nii);
     else
-      throw std::logic_error("get_nonzero_indices: unrecognized image data type");
+      throw std::runtime_error("get_nonzero_indices: unrecognized image data type");
     
     // Not reached:
     return Eigen::MatrixXi::Zero(1, 1);
@@ -118,22 +166,15 @@ namespace dualres {
 
 
   
-  Eigen::MatrixXi get_nonzero_indices_bounded(const nifti_image* const nii) {
+  Eigen::MatrixXi get_nonzero_indices_bounded(const ::nifti_image* const nii) {
     Eigen::MatrixXi ijk = dualres::get_nonzero_indices(nii);
     return (ijk.rowwise() - ijk.colwise().minCoeff());
   };
 
 
 
-  struct nifti_bounding_box {
-    Eigen::Vector3i ijk_min;
-    Eigen::Vector3i ijk_max;
-    int nnz;
-    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
-  };
 
-
-  dualres::nifti_bounding_box get_bounding_box(const nifti_image* const nii) {
+  dualres::nifti_bounding_box get_bounding_box(const ::nifti_image* const nii) {
     dualres::nifti_bounding_box nbb;
     Eigen::MatrixXi ijk = dualres::get_nonzero_indices(nii);
     nbb.ijk_min = ijk.colwise().minCoeff();
@@ -145,12 +186,12 @@ namespace dualres {
 
 
 
-  template< typename ResultType = float, typename Scalar = float >
-  std::vector<ResultType> get_nonzero_data_impl(const nifti_image* const nii) {
+  template< typename ResultType = float, typename ImageType = float >
+  std::vector<ResultType> get_nonzero_data_impl(const ::nifti_image* const nii) {
     const int nvox = (int)nii->nvox;
     std::vector<ResultType> _data;
     _data.reserve(nvox);
-    Scalar* data_ptr = (Scalar*)nii->data;
+    ImageType* data_ptr = (ImageType*)nii->data;
     ResultType voxel_value;
     for (int i = 0; i < nvox; i++) {
       voxel_value = (ResultType)(*(data_ptr + i));
@@ -164,10 +205,10 @@ namespace dualres {
 
 
   template< typename ResultType = float >
-  std::vector<ResultType> get_nonzero_data(const nifti_image* const nii) {
-    if (dualres::nii_data_type(nii) == dualres::nifti_data_type::FLOAT)
+  std::vector<ResultType> get_nonzero_data(const ::nifti_image* const nii) {
+    if (dualres::is_float(nii))
       return dualres::get_nonzero_data_impl<ResultType, float>(nii);
-    else if (dualres::nii_data_type(nii) == dualres::nifti_data_type::DOUBLE)
+    else if (dualres::is_double(nii))
       return dualres::get_nonzero_data_impl<ResultType, double>(nii);
     else
       throw std::logic_error("get_nonzero_data: unrecognized image data type");
@@ -180,13 +221,13 @@ namespace dualres {
 
 
 
-  template< typename ScalarType = float >
-  std::vector<int> get_bounding_box_nonzero_flat_index_impl(const nifti_image* const nii) {
+  template< typename ImageType = float >
+  std::vector<int> get_bounding_box_nonzero_flat_index_impl(const ::nifti_image* const nii) {
     const dualres::nifti_bounding_box bb = dualres::get_bounding_box(nii);
     const Eigen::Vector3i dims = bb.ijk_max - bb.ijk_min + Eigen::Vector3i::Ones();
-    const ScalarType* const data_ptr = (ScalarType*)nii->data;
+    const ImageType* const data_ptr = (ImageType*)nii->data;
     const int nx = nii->nx, ny = nii->ny;  // , nz = nii->nz;
-    ScalarType voxel_value;
+    ImageType voxel_value;
     int nii_index, bounded_index, count = 0;
     std::vector<int> index(dims.prod());
     for (int k = 0; k < dims[2]; k++) {
@@ -213,10 +254,10 @@ namespace dualres {
   };
 
   
-  std::vector<int> get_bounding_box_nonzero_flat_index(const nifti_image* const nii) {
-    if (dualres::nii_data_type(nii) == dualres::nifti_data_type::FLOAT)
+  std::vector<int> get_bounding_box_nonzero_flat_index(const ::nifti_image* const nii) {
+    if (dualres::is_float(nii))
       return dualres::get_bounding_box_nonzero_flat_index_impl<float>(nii);
-    else if (dualres::nii_data_type(nii) == dualres::nifti_data_type::DOUBLE)
+    else if (dualres::is_double(nii))
       return dualres::get_bounding_box_nonzero_flat_index_impl<double>(nii);
     else
       throw std::logic_error("get_bounding_box_nonzero_flat_index: unrecognized image data type");
@@ -229,12 +270,12 @@ namespace dualres {
 
 
 
-  template< typename ScalarType = float >
-  int count_nonzero_voxels_impl(const nifti_image* const nii) {
-    const ScalarType* const data_ptr = (ScalarType*)nii->data;
+  template< typename ImageType = float >
+  int count_nonzero_voxels_impl(const ::nifti_image* const nii) {
+    const ImageType* const data_ptr = (ImageType*)nii->data;
     const int nvox = (int)nii->nvox;
     int count = 0;
-    ScalarType voxel_value;
+    ImageType voxel_value;
     for (int i = 0; i < nvox; i++) {
       voxel_value = *(data_ptr + i);
       if (!(isnan(voxel_value) || voxel_value == 0))  count++;
@@ -243,10 +284,10 @@ namespace dualres {
   };
 
 
-  int count_nonzero_voxels(const nifti_image* const nii) {
-    if (dualres::nii_data_type(nii) == dualres::nifti_data_type::FLOAT)
+  int count_nonzero_voxels(const ::nifti_image* const nii) {
+    if (dualres::is_float(nii))
       return dualres::count_nonzero_voxels_impl<float>(nii);
-    else if (dualres::nii_data_type(nii) == dualres::nifti_data_type::DOUBLE)
+    else if (dualres::is_double(nii))
       return dualres::count_nonzero_voxels_impl<double>(nii);
     else
       throw std::logic_error("count_nonzero_voxels: unrecognized image data type");
@@ -258,18 +299,18 @@ namespace dualres {
 
 
 
-  template< typename ScalarType = float, typename DataType >
+  template< typename ImageType = float, typename DataType >
   void emplace_nonzero_data_impl(
-    nifti_image* nii,
+    ::nifti_image* nii,
     const Eigen::Matrix<DataType, Eigen::Dynamic, 1> &nzdat
   ) {
     const int nvox = (int)nii->nvox;
-    ScalarType* nii_ptr = (ScalarType*)nii->data;
-    ScalarType voxel_value;
+    ImageType* nii_ptr = (ImageType*)nii->data;
+    ImageType voxel_value;
     for (int i = 0, j = 0; i < nvox && j < nzdat.size(); i++) {
       voxel_value = (*nii_ptr);
       if (!(isnan(voxel_value) || voxel_value == 0)) {
-	(*nii_ptr) = (ScalarType)nzdat[j];
+	(*nii_ptr) = (ImageType)nzdat[j];
 	j++;
       }
       ++nii_ptr;
@@ -279,15 +320,15 @@ namespace dualres {
 
   template< typename DataType >
   void emplace_nonzero_data(
-    nifti_image* nii,
+    ::nifti_image* nii,
     const Eigen::Matrix<DataType, Eigen::Dynamic, 1> &nzdat
   ) {
-    if (dualres::nii_data_type(nii) == dualres::nifti_data_type::FLOAT)
+    if (dualres::is_float(nii))
       dualres::emplace_nonzero_data_impl<float, DataType>(nii, nzdat);
-    else if (dualres::nii_data_type(nii) == dualres::nifti_data_type::DOUBLE)
+    else if (dualres::is_double(nii))
       dualres::emplace_nonzero_data_impl<double, DataType>(nii, nzdat);
     else
-      throw std::logic_error("emplace_nonzero_data: unrecognized image data type");
+      throw std::runtime_error("emplace_nonzero_data: unrecognized image data type");
   };
 
   

@@ -99,9 +99,16 @@ dualres::MultiResData<T>::MultiResData(
   const std::vector<typename dualres::MultiResData<T>::scalar_type> &covariance_parameters,
   const typename dualres::MultiResData<T>::scalar_type &neighborhood_radius
 ) {
-  dualres::kriging_matrix_data<scalar_type> kmd =
-    dualres::get_sparse_kriging_matrix_data<scalar_type>(
+  dualres::kriging_matrix_data<scalar_type> kmd;
+  if (dualres::is_float(h_res))
+    kmd = dualres::get_sparse_kriging_matrix_data<float>(
       h_res, s_res, covariance_parameters, neighborhood_radius);
+  else if (dualres::is_double(h_res))
+    kmd = dualres::get_sparse_kriging_matrix_data<double>(
+      h_res, s_res, covariance_parameters, neighborhood_radius);
+  else
+    throw std::runtime_error("MultiResData: image is of unrecognized datatype");
+  
   std::vector<scalar_type> v_Yh = dualres::get_nonzero_data<scalar_type>(h_res);
   std::vector<scalar_type> v_Ys = dualres::get_nonzero_data<scalar_type>(s_res);
   

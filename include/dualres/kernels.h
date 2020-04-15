@@ -27,6 +27,10 @@ namespace dualres {
       const T &variance = 1.0
     );
 
+
+    template< typename T >
+    T rbf_fwhm_to_bandwidth(const T &fwhm, const T &exponent = 1.9999);
+
     
   };
   

@@ -50,6 +50,14 @@ namespace dualres {
   }
   
 
+  dualres::__internals::path current_path() {
+    return boost::filesystem::current_path();
+  };
+
+  void current_path(const dualres::__internals::path &p) {
+    if (!p.empty())
+      boost::filesystem::current_path(p);
+  };
 
   
 }

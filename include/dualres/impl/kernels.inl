@@ -1,5 +1,6 @@
 
 #include <cmath>
+#include <stdexcept>
 
 
 // scalar version
@@ -23,11 +24,21 @@ T dualres::kernels::rbf_inverse(
   const T &variance
 ) {
   if (rho <= (T)0 || rho >= (T)1)
-    throw std::logic_error("rbf_inverse: inverse kernel only for rho between (0, 1)");
+    throw std::domain_error("rbf_inverse: inverse kernel only for rho between (0, 1)");
   return std::pow(-std::log(rho / variance) / bandwidth, 1 / exponent);
 };
 
 
+
+
+
+template< typename T >
+T dualres::kernels::rbf_fwhm_to_bandwidth(
+  const T &fwhm,
+  const T &exponent
+) {
+  return std::log((T)2) / std::pow(fwhm / 2, exponent);
+};
 
 
 

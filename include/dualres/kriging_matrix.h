@@ -140,7 +140,7 @@ namespace dualres {
   
   
 
-  template< typename Scalar = float >
+  template< typename ImageType = float >
   dualres::kriging_matrix_data<float> get_sparse_kriging_matrix_data(
     const nifti_image* const high_res,
     const nifti_image* const std_res,
@@ -154,13 +154,14 @@ namespace dualres {
     //
 
     
-    const Scalar* const data_ptr = (Scalar*)high_res->data;    
+    const ImageType* const data_ptr = (ImageType*)high_res->data;    
     const int nvox_hr = (int)high_res->nvox;
     const dualres::qform_type Qform_hr = dualres::qform_matrix(high_res);
-    Scalar voxel_value_hr;
+    ImageType voxel_value_hr;
 
     std::cout << "Computing neighborhoods" << std::endl;
-    const Eigen::MatrixXi P = neighborhood_perturbation(Qform_hr, neighborhood_radius);
+    const Eigen::MatrixXi P = dualres::neighborhood_perturbation(
+      Qform_hr, neighborhood_radius);
     // std::cout << P << std::endl;
     
     if (P.rows() > 5e3)
@@ -200,7 +201,7 @@ namespace dualres {
     // Qform_std.col(3) = Qform_hr.col(3);
     
     Eigen::VectorXf k_prime;    // 
-    Eigen::VectorXf _w_;        //
+    Eigen::VectorXf _w_;        // one row of kriging matrix weights
     
     dualres::kriging_matrix_data<float> kmd;
     kmd.cum_row_counts.resize(ijk_std.rows() + 1);

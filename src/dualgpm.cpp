@@ -238,6 +238,7 @@ int main(int argc, char *argv[]) {
     nifti_image_free(_high_res_);
   }  // try ...
   catch (const std::exception &__err) {
+    error_status = true;
     std::cerr << "Exception caught with message:\n'"
 	      << __err.what() << "'\n"
 	      << std::endl;

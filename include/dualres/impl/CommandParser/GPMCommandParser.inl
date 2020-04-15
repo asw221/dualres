@@ -22,9 +22,7 @@ void dualres::GPMCommandParser<T>::show_usage() const {
 template< typename T >
 void dualres::GPMCommandParser<T>::show_help() const {
   show_usage();
-  std::cerr << "\nUsage:\n"
-	    << "\tdualgpm --highres path/to/img1 <options>\n\n"
-	    << "Options:\n"
+  std::cerr << "Options:\n"
 	    << "\t--burnin   int  number of MCMC burnin iterations\n"
 	    << "\t--covariance   f1 f2 f3  Gaussian process covariance parameters\n"
 	    << "\t--leapfrog int  number of MCMC integrator steps\n"
@@ -38,7 +36,8 @@ void dualres::GPMCommandParser<T>::show_help() const {
 	    << "\t--seed     int  RNG seed\n"
 	    << "\t--threads  int  number of threads for parallel computations\n"
 	    << "\nimg[1-2] are valid NIfTI files and f[1-3] are parameters "
-	    << "of an exponential radial covariance function.\n\n";
+	    << "of an exponential radial covariance function."
+	    << "\n\n";
 };
 
 

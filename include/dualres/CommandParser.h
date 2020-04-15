@@ -114,33 +114,7 @@ namespace dualres {
   };
 
 
-
-  template< typename T = double >
-  class NeighborhoodCommandParser {
-  public:
-    typedef T scalar_type;
-    enum class call_status { success, error, help };
-
-    NeighborhoodCommandParser(int argc, char **argv);
-    bool error() const;
-    bool help_invoked() const;
-    bool operator!() const;
-    scalar_type parameter(const int which) const;
-    scalar_type rho() const;
-    operator bool() const;
-
-    void show_usage() const;
-
-  private:
-    call_status _status;
-    scalar_type _rho;
-    std::vector<scalar_type> _kernel_params;
-  };
-
-
-
-
-
+  
   template< typename T = float >
   class FFTWWisdomCommandParser {
   public:
@@ -167,8 +141,67 @@ namespace dualres {
     int _threads;
     std::string _image_file;
   };
+
+
+
+
+  template< typename T = float >
+  class SmoothingCommandParser {
+  public:
+    typedef T scalar_type;
+    enum class call_status { success, error, help };
+
+    SmoothingCommandParser(int argc, char **argv);
+    bool error() const;
+    bool help_invoked() const;
+    bool operator!() const;
+    operator bool() const;
+    scalar_type exponent() const;
+    scalar_type fwhm() const;
+    scalar_type radius() const;
+    std::string image_file() const;
+
+    void show_help() const;
+    void show_usage() const;
+
+  private:
+    call_status _status;
+    scalar_type _exponent;
+    scalar_type _fwhm;
+    scalar_type _radius;
+    std::string _caller;
+    std::string _image_file;
+  };
+
+
+
+
+
+  template< typename T = double >
+  class NeighborhoodCommandParser {
+  public:
+    typedef T scalar_type;
+    enum class call_status { success, error, help };
+
+    NeighborhoodCommandParser(int argc, char **argv);
+    bool error() const;
+    bool help_invoked() const;
+    bool operator!() const;
+    scalar_type parameter(const int which) const;
+    scalar_type rho() const;
+    operator bool() const;
+
+    void show_usage() const;
+
+  private:
+    call_status _status;
+    scalar_type _rho;
+    std::vector<scalar_type> _kernel_params;
+  };
+
+
   
-}
+}  // namespace dualres
 
 
 
@@ -211,8 +244,9 @@ void dualres::CommandParser<T>::show_usage() const {
 
 #include "dualres/impl/CommandParser/GPMCommandParser.inl"
 #include "dualres/impl/CommandParser/EstimRbfCommandParser.inl"
-#include "dualres/impl/CommandParser/NeighborhoodCommandParser.inl"
 #include "dualres/impl/CommandParser/FFTWWisdomCommandParser.inl"
+#include "dualres/impl/CommandParser/NeighborhoodCommandParser.inl"
+#include "dualres/impl/CommandParser/SmoothingCommandParser.inl"
 
 #endif  // _DUALRES_COMMAND_PARSER_
 
