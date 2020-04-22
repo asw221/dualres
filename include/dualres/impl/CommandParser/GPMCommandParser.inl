@@ -26,14 +26,14 @@ void dualres::GPMCommandParser<T>::show_help() const {
 	    << "\t--burnin   int  number of MCMC burnin iterations\n"
 	    << "\t--covariance   f1 f2 f3  Gaussian process covariance parameters\n"
 	    << "\t--leapfrog int  number of MCMC integrator steps\n"
-	    << "\t--monitor       ~~NOT IMPLEMENTED~~\n"
+	    << "\t--monitor       monitor MCMC iterations (useful for debugging)\n"
 	    << "\t--neighborhood f1  neighborhood size (mm) for kriging approximation\n"
 	    << "\t--nsave    int  number of MCMC samples to save in output\n"
 	    << "\t--output   file/basename  valid path prefix for output files\n"
+	    << "\t--seed     int  RNG seed\n"
 	    << "\t--stdres   path/to/img2\n"
 	    << "\t--theta    alias for --covariance\n"
 	    << "\t--thin     int  thinning factor for MCMC samples\n"
-	    << "\t--seed     int  RNG seed\n"
 	    << "\t--threads  int  number of threads for parallel computations\n"
 	    << "\nimg[1-2] are valid NIfTI files and f[1-3] are parameters "
 	    << "of an exponential radial covariance function."
@@ -296,7 +296,10 @@ dualres::GPMCommandParser<T>::GPMCommandParser(int argc, char* argv[]) {
     std::cerr << "\nError: User must supply the --highres argument\n";
     _status = call_status::error;
   }
-  if (error())  std::cerr << "\nSee dualgpm --help for more information\n";
+  if (error()) {
+    show_usage();
+    std::cerr << "\nSee dualgpm --help for more information\n";
+  }
 };
 
 

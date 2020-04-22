@@ -93,6 +93,7 @@ namespace dualres {
     enum class call_status { success, error, help };
 
     EstimRbfCommandParser(int argc, char **argv);
+    bool use_constraint() const;
     bool error() const;
     bool help_invoked() const;
     bool operator!() const;
@@ -108,6 +109,7 @@ namespace dualres {
 
   private:
     call_status _status;
+    bool _use_constraint;
     std::string _image_file;
     std::string _output_file;
     std::vector<scalar_type> _kernel_params;

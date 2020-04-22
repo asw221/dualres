@@ -131,7 +131,8 @@ namespace dualres {
   // optimizer from NLOPT
   int compute_rbf_parameters(
     std::vector<double> &theta,
-    const dualres::mce_data &data
+    const dualres::mce_data &data,
+    const bool constrained = true
   ) {
     const int K = 3;  // 3 parameters, rbf model
     const double tau_max = (double)data.covariance[0], eps0 = 1e-5;
@@ -158,7 +159,8 @@ namespace dualres {
     optimizer.set_lower_bounds(lb);
     optimizer.set_upper_bounds(ub);
     optimizer.set_min_objective(dualres::_rbf_least_squares, &objective_data);
-    optimizer.add_inequality_constraint(dualres::_rbf_constraint, NULL, eps0 / 100);
+    if (constrained)
+      optimizer.add_inequality_constraint(dualres::_rbf_constraint, NULL, eps0 / 100);
     optimizer.set_xtol_rel(1e-5);
     try {
       optimizer.optimize(theta, min_obj);

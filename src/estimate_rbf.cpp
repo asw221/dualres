@@ -72,7 +72,7 @@ int main(int argc, char *argv[]) {
   
   std::cout << "Estimating smoothness (radial basis function approximation)... "
 	    << std::flush;
-  dualres::compute_rbf_parameters(theta, mce);
+  dualres::compute_rbf_parameters(theta, mce, inputs.use_constraint());
   std::cout << "Done!" << std::endl;
   std::cout << "  Marg. Var. = " << theta[0] << "\n"
 	    << "  Bandwidth  = " << theta[1] << "\n"

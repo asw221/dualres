@@ -628,7 +628,7 @@ dualres::MultiResParameters<T>::update(
   // proposed_energy = _log_posterior(data, _mu_star) + _potential_energy();
   proposed_energy = lp_proposal + _potential_energy();
   R = std::exp(proposed_energy - _initial_energy);
-  if (dualres::__internals::_MONITOR_) {
+  if (dualres::monitor_simulations()) {
     std::cout << std::setprecision(4)
 	      << "Energy Transition (" << _initial_energy
 	      << " -> " << proposed_energy

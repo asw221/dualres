@@ -30,8 +30,8 @@ link_directories(${dualres_SOURCE_DIR}/lib/nifti/lib)
 ## --- dualgpm -------------------------------------------------------
 add_executable(dualgpm dualgpm.cpp)
 target_link_libraries(dualgpm Boost::filesystem FFTW::FloatOpenMP
-		FFTW::Float Eigen3::Eigen OpenMP::OpenMP_CXX
-		ZLIB::ZLIB libniftiio.a libznz.a)
+		FFTW::Float Eigen3::Eigen NLOPT::nlopt
+		OpenMP::OpenMP_CXX ZLIB::ZLIB libniftiio.a libznz.a)
 set_target_properties(dualgpm PROPERTIES RUNTIME_OUTPUT_DIRECTORY
 		"${CMAKE_BINARY_DIR}/bin")
 

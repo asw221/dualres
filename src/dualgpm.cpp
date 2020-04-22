@@ -20,6 +20,7 @@
 #include "dualres/MultiResData.h"
 #include "dualres/MultiResParameters.h"
 #include "dualres/nifti_manipulation.h"
+#include "dualres/utilities.h"
 
 
 
@@ -161,11 +162,18 @@ int main(int argc, char *argv[]) {
       throw std::domain_error(error_stream.str());
     }
 
+    //
+    std::cout << "Covariance parameters: (" << _covar_params[0]
+	      << ", " << _covar_params[1] << ", " << _covar_params[2] << ")"
+	      << std::endl;
+    //
 
     _hmc_ = dualres::HMCParameters<scalar_type>(
       inputs.mcmc_burnin(), inputs.mcmc_nsave(), inputs.mcmc_thin(),
       inputs.mcmc_leapfrog_steps()
       );
+    dualres::set_monitor_simulations(inputs.monitor());
+      
     std::cout << "\nMCMC settings:"
 	      << "\n-----------------"
 	      << "\nBurnin   = " << inputs.mcmc_burnin()
@@ -274,7 +282,7 @@ bool compute_covar_parameters_if_needed(
     std::vector<double> covar_params_dtemp{1, 0.6, 1.5};
     // ^^ provide better starting values, especially for marginal variance
 
-    std::cout << "Estimating covar parameters... " << std::flush;
+    std::cout << "Estimating covariance parameters... " << std::flush;
     int kp_success;  // 0 - success, 1 - error
     kp_success = dualres::compute_rbf_parameters(
       covar_params_dtemp, dualres::compute_mce_summary_data(input_data));
@@ -300,15 +308,15 @@ bool valid_covar_parameters(const std::vector<T> &theta) {
   // Error check input covar parameters:
   bool success = true;
   if (theta[0] <= 0) {
-    std::cerr << "First covar parameter (marginal variance) must be > 0\n";
+    std::cerr << "First covariance parameter (marginal variance) must be > 0\n";
     success = false;
   }
   if (theta[1] <= 0) {
-    std::cerr << "Second covar parameter (bandwidth) must be > 0\n";
+    std::cerr << "Second covariance parameter (bandwidth) must be > 0\n";
     success = false;
   }
   if (theta[2] <= 0 || theta[2] > 2) {
-    std::cerr << "Third covar parameter (exponent) must be in (0, 2]\n";
+    std::cerr << "Third covariance parameter (exponent) must be in (0, 2]\n";
     success = false;
   }
   return success;

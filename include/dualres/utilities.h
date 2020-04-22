@@ -25,6 +25,13 @@ namespace dualres {
   
   void set_seed(const unsigned int seed);
 
+  void set_monitor_simulations(const bool monitor) {
+    dualres::__internals::_MONITOR_ = monitor;
+  };
+
+  bool monitor_simulations() {
+    return dualres::__internals::_MONITOR_;
+  };
   
 
 

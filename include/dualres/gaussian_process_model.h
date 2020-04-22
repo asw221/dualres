@@ -128,7 +128,7 @@ namespace dualres {
 	    posterior_summary.update(mu, sigma, log_posterior);
 	    save_count++;
 	  }
-	  if (!dualres::__internals::_MONITOR_) {
+	  if (!dualres::monitor_simulations()) {
 	    pb++;
 	    std::cout << pb;
 	  }

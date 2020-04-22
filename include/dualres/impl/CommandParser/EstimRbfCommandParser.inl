@@ -21,6 +21,7 @@ template< typename T >
 dualres::EstimRbfCommandParser<T>::EstimRbfCommandParser(int argc, char **argv) {
   std::ifstream ifs;
   _status = call_status::success;
+  _use_constraint = false;
 
   _kernel_params.resize(3);
   for (int i = 0; i < 3; i++)
@@ -32,8 +33,12 @@ dualres::EstimRbfCommandParser<T>::EstimRbfCommandParser(int argc, char **argv) 
   else {
     for (int i = 1; i < argc; i++) {
       std::string arg = argv[i];
+      
       if ((arg == "-h") || (arg == "--help")) {
 	_status = call_status::help;
+      }
+      else if (arg == "--constrained" || arg == "--constraint") {
+	_use_constraint = true;
       }
       else if (arg == "--variance" || arg == "-var") {
 	if (i + 1 < argc) {
@@ -114,6 +119,10 @@ dualres::EstimRbfCommandParser<T>::EstimRbfCommandParser(int argc, char **argv) 
 
 
 
+template< typename T >
+bool dualres::EstimRbfCommandParser<T>::use_constraint() const {
+  return _use_constraint;
+};
 
 template< typename T >
 bool dualres::EstimRbfCommandParser<T>::error() const {

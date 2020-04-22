@@ -21,7 +21,7 @@ int main(int argc, char *argv[]) {
   Eigen::Vector3f _voxel_dims;
   
   if (!dualres::is_nifti_file(_input_image_file)) {
-    std::cerr << "\nimage_dimensions: requires one NIfTI file as input\n";
+    std::cerr << "image_dimensions: requires one NIfTI file as input\n";
     return 1;
   }
 
@@ -35,6 +35,9 @@ int main(int argc, char *argv[]) {
 	      << ")\n"
 	      << "  Voxel dim (mm)  -  ("
 	      << _voxel_dims[0] << ", " << _voxel_dims[1] << ", " << _voxel_dims[2]
+	      // << ")\n"
+	      // << "  Grid spacings   -  ("
+	      // << _nii->dx << ", " << _nii->dy << ", " << _nii->dz
 	      << ")\n";
 
     ::nifti_image_free(_nii);
