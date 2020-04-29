@@ -7,8 +7,9 @@ BUILDDIR := build
 EXECDIR := bin
 
 ## Depends on: boost, eigen3, fftw3, openmp, nlopt
+EIGEN3_DIR := /usr/local/include/eigen3
 
-INC := -Iinclude -Ilib/nifti/include -I/usr/local/include/eigen3 -I/usr/local/include
+INC := -Iinclude -Ilib/nifti/include -I$(EIGEN3_DIR) -I/usr/local/include
 LIB := -Llib/nifti/lib -L/usr/local/lib -lniftiio -lznz -lz -lm -lnlopt -lboost_filesystem -lfftw3f -lfftw3f_omp -Xpreprocessor -fopenmp -lomp
 
 
@@ -30,8 +31,8 @@ estimate_snr: $(SRCDIR)/estimate_snr.cpp
 gaussian_smooth: $(SRCDIR)/gaussian_smooth.cpp
 	$(CXX) $(CXXFLAGS) $(INC) $(LIB) -o $(EXECDIR)/gaussian_smooth $<
 
-image_dimensions: $(SRCDIR)/image_dimensions.cpp
-	$(CXX) $(CXXFLAGS) $(INC) $(LIB) -o $(EXECDIR)/image_dimensions $<
+image_info: $(SRCDIR)/image_info.cpp
+	$(CXX) $(CXXFLAGS) $(INC) $(LIB) -o $(EXECDIR)/image_info $<
 
 preplan_fft: $(SRCDIR)/preplan_fft.cpp
 	$(CXX) $(CXXFLAGS) $(INC) $(LIB) -o $(EXECDIR)/preplan_fft $<

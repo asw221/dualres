@@ -70,11 +70,11 @@ set_target_properties(gaussian_smooth PROPERTIES
 		RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
 
 
-## --- image_dimensions ----------------------------------------------
-add_executable(image_dimensions image_dimensions.cpp)
-target_link_libraries(image_dimensions Boost::filesystem Eigen3::Eigen
+## --- image_info ----------------------------------------------------
+add_executable(image_info image_info.cpp)
+target_link_libraries(image_info Boost::filesystem Eigen3::Eigen
 		ZLIB::ZLIB libniftiio.a libznz.a)
-set_target_properties(image_dimensions PROPERTIES
+set_target_properties(image_info PROPERTIES
 		RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
 
 

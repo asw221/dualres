@@ -2,6 +2,10 @@
 build
 bin
 
+# Ignore doxygen config file
+Doxyfile
+doc
+
 # Ignore any executables
 bin/*
 Makefile

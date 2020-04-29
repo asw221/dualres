@@ -14,6 +14,8 @@
 
 namespace dualres {
 
+  typedef boost::filesystem::path path;
+
   
   enum class use_lambda_method { PROFILE, NATIVE, EXTENDED };
 
@@ -31,7 +33,7 @@ namespace dualres {
   namespace __internals {
 
     typedef std::mt19937 rng_type;
-    typedef boost::filesystem::path path;
+    // typedef boost::filesystem::path path;
 
 
     bool _MONITOR_ = false;
@@ -41,29 +43,32 @@ namespace dualres {
     
     rng_type _RNG_(42);
 
-    const path _TEMP_DIR_(boost::filesystem::temp_directory_path().string() +
-			  path::preferred_separator +
-			  "dualresTemp" +
-			  path::preferred_separator);
-    const path _FFTW_WISDOM_FILE_(_TEMP_DIR_.string() + "__fftw_wisdom");
+    const dualres::path _TEMP_DIR_(boost::filesystem::temp_directory_path()
+				   .string() + path::preferred_separator +
+				   "dualresTemp" +
+				   path::preferred_separator);
+    const dualres::path _FFTW_WISDOM_FILE_(_TEMP_DIR_.string() +
+					   "__fftw_wisdom");
     
   }
+  // namespace __internals
   
 
-  dualres::__internals::path current_path() {
+  
+
+  dualres::path current_path() {
     return boost::filesystem::current_path();
   };
 
-  void current_path(const dualres::__internals::path &p) {
+  void current_path(const dualres::path &p) {
     if (!p.empty())
       boost::filesystem::current_path(p);
   };
 
   
 }
+// namespace dualres
 
-
-// #include "data_types.inl"
 
 #endif  // _DUALRES_DEFINES_
 

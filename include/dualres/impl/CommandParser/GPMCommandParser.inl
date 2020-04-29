@@ -25,6 +25,7 @@ void dualres::GPMCommandParser<T>::show_help() const {
   std::cerr << "Options:\n"
 	    << "\t--burnin   int  number of MCMC burnin iterations\n"
 	    << "\t--covariance   f1 f2 f3  Gaussian process covariance parameters\n"
+	    << "\t--debug         instruction to run a short debug-length MCMC chain\n"
 	    << "\t--leapfrog int  number of MCMC integrator steps\n"
 	    << "\t--monitor       monitor MCMC iterations (useful for debugging)\n"
 	    << "\t--neighborhood f1  neighborhood size (mm) for kriging approximation\n"
@@ -139,6 +140,12 @@ dualres::GPMCommandParser<T>::GPMCommandParser(int argc, char* argv[]) {
 	  std::cerr << _MESSAGE_IMPROPER_COVARIANCE;
 	  _status = call_status::error;
 	}
+      }
+      else if (arg == "--debug") {
+	_mcmc_burnin = 50;
+	_mcmc_nsave = 10;
+	_mcmc_thin = 1;
+	_monitor = true;
       }
       else if (arg == "--highres") {
 	if (i + 1 < argc) {  // make sure not at end of argv

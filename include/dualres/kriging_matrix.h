@@ -153,7 +153,7 @@ namespace dualres {
     // the brain)
     //
 
-    
+    const float eps0 = 1e-5;
     const ImageType* const data_ptr = (ImageType*)high_res->data;    
     const int nvox_hr = (int)high_res->nvox;
     const dualres::qform_type Qform_hr = dualres::qform_matrix(high_res);
@@ -273,7 +273,8 @@ namespace dualres {
 	      bounded_hr_index.push_back(bounded_nonzero_index_hr[bhr_i]);  // (i)
 	      perturbation_index.push_back(j);                              // (ii)
 	      dist = (Qform_std * current_ijk_std -
-		      Qform_hr * current_ijk_hr.cast<float>()).norm();
+		      Qform_hr * current_ijk_hr.cast<float>()).norm() +
+		eps0;
 	      kernel_distances.push_back(dualres::kernels::rbf(dist,
                 rbf_params[1], rbf_params[2], rbf_params[0]));              // (iii)
 	      row_count++;
