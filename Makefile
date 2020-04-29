@@ -14,6 +14,8 @@ LIB := -Llib/nifti/lib -L/usr/local/lib -lniftiio -lznz -lz -lm -lnlopt -lboost_
 
 
 
+all: dualgpm clear_fftw_history estimate_rbf estimate_snr gaussian_smooth image_info preplan_fft rbf_neighborhood simulate_data_from_image
+
 
 
 dualgpm: $(SRCDIR)/dualgpm.cpp

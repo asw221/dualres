@@ -17,7 +17,7 @@ namespace dualres {
 
   bool initialize_temporary_directory();
   
-  dualres::__internals::path fftw_wisdom_file();
+  dualres::path fftw_wisdom_file();
   dualres::__internals::rng_type& rng();
   
   int set_number_of_threads(const int threads);

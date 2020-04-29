@@ -14,7 +14,7 @@ bool dualres::initialize_temporary_directory() {
 };
 
 
-dualres::__internals::path dualres::fftw_wisdom_file() {
+dualres::path dualres::fftw_wisdom_file() {
   return dualres::__internals::_FFTW_WISDOM_FILE_;
 };
 

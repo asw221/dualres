@@ -3,7 +3,7 @@
 #include <nifti1_io.h>
 #include <string>
 #include <stdexcept>
-#include <stdio>
+#include <stdio.h>
 #include <vector>
 
 #include "dualres/defines.h"
@@ -33,7 +33,7 @@ int dualres::count_nonzero_voxels(const ::nifti_image* const nii) {
 
 
 
-template< typename ImageType = float >
+template< typename ImageType >
 int dualres::count_nonzero_voxels_impl(const ::nifti_image* const nii) {
   const ImageType* const data_ptr = (ImageType*)nii->data;
   const int nvox = (int)nii->nvox;
@@ -69,7 +69,7 @@ void dualres::emplace_nonzero_data(
 
 
 
-template< typename ImageType = float, typename DataType >
+template< typename ImageType, typename DataType >
 void dualres::emplace_nonzero_data_impl(
   ::nifti_image* nii,
   const Eigen::Matrix<DataType, Eigen::Dynamic, 1> &nzdat
@@ -127,7 +127,7 @@ std::vector<int> dualres::get_bounding_box_nonzero_flat_index(
 };
 
 
-template< typename ImageType = float >
+template< typename ImageType >
 std::vector<int> dualres::get_bounding_box_nonzero_flat_index_impl(
   const ::nifti_image* const nii
 ) {
@@ -165,7 +165,7 @@ std::vector<int> dualres::get_bounding_box_nonzero_flat_index_impl(
 
   
 
-template< typename ResultType = float >
+template< typename ResultType >
 std::vector<ResultType> dualres::get_nonzero_data(
   const ::nifti_image* const nii
 ) {
@@ -181,7 +181,7 @@ std::vector<ResultType> dualres::get_nonzero_data(
 };
 
 
-template< typename ResultType = float, typename ImageType = float >
+template< typename ResultType, typename ImageType >
 std::vector<ResultType> dualres::get_nonzero_data_impl(
   const ::nifti_image* const nii
 ) {
@@ -218,7 +218,7 @@ Eigen::MatrixXi dualres::get_nonzero_indices(
 };
 
 
-template< typename ImageType = float >
+template< typename ImageType >
 Eigen::MatrixXi dualres::get_nonzero_indices_impl(
   const ::nifti_image* const nii
 ) {
