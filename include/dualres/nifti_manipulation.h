@@ -11,7 +11,7 @@
 #define _DUALRES_NIFTI_MANIPULATION_
 
 
-/*! @defgroup nifti_manipulation
+/*! @defgroup NiftiManipulation
  * 
  * Collection of functions to extract data and summary information
  * from \c nifti_image structures (defined in 
@@ -22,7 +22,7 @@
 
 
 namespace dualres {
-  /*! @addtogroup nifti_manipulation
+  /*! @addtogroup NiftiManipulation
    * @{
    */
 

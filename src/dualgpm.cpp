@@ -240,7 +240,20 @@ int main(int argc, char *argv[]) {
     std::cout << "Sampling took " << model_output.sampling_time() << " (sec)\n"
 	      << "Metropolis-Hastings rate was "
 	      << (model_output.metropolis_hastings_rate() * 100)
-	      << "%" << std::endl;
+	      << "%\n" << std::endl;
+    
+    // For simulations: write MH rate and sampling time to 'stats' file
+    mcmc_samples_stream.open(inputs.output_file("_stats.csv"));
+    if (mcmc_samples_stream.is_open()) {
+      mcmc_samples_stream << "MHrate,SamplingTime,StepSize\n"
+			  << model_output.metropolis_hastings_rate()
+			  << ","
+			  << model_output.sampling_time()
+			  << ","
+			  << _hmc_.eps_value();
+      mcmc_samples_stream.close();
+    }
+    
 
     // 
     nifti_image_free(_high_res_);

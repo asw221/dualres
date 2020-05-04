@@ -62,7 +62,6 @@ namespace dualres {
     );
     const VectorType& mu() const;
     
-    // const af::array& lambda() const;
     const ComplexArrayType& lambda() const;
     const Eigen::VectorXi& data_indices() const;
     
@@ -73,7 +72,6 @@ namespace dualres {
     scalar_type sigma(const int which) const;
     scalar_type tau() const;
 
-    // scalar_type sum_mu() const;
 
     
   private:
@@ -83,7 +81,6 @@ namespace dualres {
     fftwf_plan __backward_fft_plan;
     
 
-    // ComplexArrayType _grad;
     ComplexArrayType _lambda;
     ComplexArrayType _lambda_mass;
     ComplexArrayType _momentum;
@@ -261,7 +258,7 @@ dualres::MultiResParameters<T>::MultiResParameters(
 		 * 100 ) << "%)"
 	    << std::endl;
   
-  if (_nonpositive_eigen_values.size() >= _lambda.size() / 2)
+  if ((int)_nonpositive_eigen_values.size() >= _lambda.size() / 2)
     throw std::domain_error("Too many negative eigen values");
   
 
@@ -549,37 +546,6 @@ typename dualres::MultiResParameters<T>::scalar_type
 dualres::MultiResParameters<T>::tau() const {
   return std::sqrt(1 / _tau_sq_inv);
 };
-
-
-// template< typename T >
-// typename dualres::MultiResParameters<T>::scalar_type
-// dualres::MultiResParameters<T>::sum_mu() const {
-//   return _real_mu.sum();
-// };
-
-
-
-
-
-
-// template< af_dtype T >
-// void dualres::MultiResParameters<T>::print_test() {
-//   std::cout << _n_datasets << " datasets measured on a grid of dim ("
-// 	      << (_mu.dims(0) / 2 + 1) << " x " << (_mu.dims(1) / 2 + 1)
-// 	      << " x " << (_mu.dims(2) / 2 + 1) << ")\n"
-// 	      << "  theta = [" << _theta[0] << ", " << _theta[1]
-// 	      << ", " << _theta[2] << "]^T\n"
-// 	      << "  sigma^-2 = [";
-//   for (int i = 0; i < _n_datasets; i++) {
-//     std::cout << _sigma_sq_inv[i] << ", ";
-//   }
-//   std::cout << "\b\b]^T\n"
-// 	      << "  lambda =\n";
-//   print_array_summary(af::real(_lambda));
-//   std::cout << "  mu =\n";
-//   print_array_summary(af::real(_mu(__lambda_grid_indices)));
-//   std::cout << "\n";
-// };
 
 
 
