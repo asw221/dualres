@@ -154,9 +154,9 @@ int main(int argc, char *argv[]) {
     if (!valid_covar_parameters(_covar_params)) {
       error_status = true;
       error_stream << "Error: covariance parameters are not valid (";
-      for (int i = 0; i < _covar_params.size(); i++) {
+      for (int i = 0; i < (int)_covar_params.size(); i++) {
 	error_stream << _covar_params[i];
-	if (i < (_covar_params.size() - 1))  error_stream << ", ";
+	if (i < ((int)_covar_params.size() - 1))  error_stream << ", ";
       }
       error_stream << ")\n";
       throw std::domain_error(error_stream.str());
@@ -293,7 +293,7 @@ bool compute_covar_parameters_if_needed(
       success = false;
     }
     else {
-      for (int i = 0; i < covar_params_dtemp.size(); i++)
+      for (int i = 0; i < (int)covar_params_dtemp.size(); i++)
 	theta.push_back((T)covar_params_dtemp[i]);
       std::cout << "Done!" << std::endl;
     }

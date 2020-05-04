@@ -1,11 +1,9 @@
 
 #include <algorithm>
 #include <boost/filesystem.hpp>
-// #include <Eigen/Core>
 #include <random>
 #include <string>
 #include <thread>
-// #include <type_traits>
 
 
 #ifndef _DUALRES_DEFINES_
@@ -13,22 +11,30 @@
 
 
 namespace dualres {
+  /*! @addtogroup dualres
+   * @{
+   */
+  
 
   typedef boost::filesystem::path path;
 
   
   enum class use_lambda_method { PROFILE, NATIVE, EXTENDED };
 
+
+  /*!
+   * See official NIfTI datatype 
+   * <a href="https://nifti.nimh.nih.gov/nifti-1/documentation/nifti1fields/nifti1fields_pages/datatype.html">definitions</a>
+   */
   enum class nifti_data_type {
     OTHER = 0,  BINARY = 1,   CHAR = 2,    SHORT = 4, INT = 8,
     FLOAT = 16, COMPLEX = 32, DOUBLE = 64, RGB = 128, ALL = 255
   };
-  // See:
-  // https://nifti.nimh.nih.gov/nifti-1/documentation/nifti1fields/nifti1fields_pages/datatype.html
 
 
   
 
+  /// @cond INTERNAL
   
   namespace __internals {
 
@@ -42,17 +48,22 @@ namespace dualres {
     int _N_THREADS_ = std::max(_MAX_THREADS_ * 4 / 5, 1);
     
     rng_type _RNG_(42);
+    
 
-    const dualres::path _TEMP_DIR_(boost::filesystem::temp_directory_path()
-				   .string() + path::preferred_separator +
-				   "dualresTemp" +
-				   path::preferred_separator);
-    const dualres::path _FFTW_WISDOM_FILE_(_TEMP_DIR_.string() +
-					   "__fftw_wisdom");
+    const dualres::path _TEMP_DIR_(
+      boost::filesystem::temp_directory_path().string() +
+      path::preferred_separator + "dualresTemp" +
+      path::preferred_separator
+    );
+    
+    const dualres::path _FFTW_WISDOM_FILE_(
+      _TEMP_DIR_.string() + "__fftw_wisdom"
+    );
     
   }
   // namespace __internals
-  
+
+  /// @endcond
 
   
 
@@ -65,7 +76,7 @@ namespace dualres {
       boost::filesystem::current_path(p);
   };
 
-  
+  /*! @} */  
 }
 // namespace dualres
 

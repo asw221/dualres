@@ -2,21 +2,27 @@
 #include <Eigen/Core>
 #include <nifti1_io.h>
 #include <string>
-// #include <stdexcept>
-// #include <stdio.h>
 #include <vector>
 
 #include "dualres/defines.h"
-// #include "dualres/utilities.h"
 
 
 #ifndef _DUALRES_NIFTI_MANIPULATION_
 #define _DUALRES_NIFTI_MANIPULATION_
 
 
+/*! @defgroup nifti_manipulation
+ * 
+ * Collection of functions to extract data and summary information
+ * from \c nifti_image structures (defined in 
+ * <a href="https://nifti.nimh.nih.gov/pub/dist/src/niftilib/nifti1_io.h">nifti1_io.h<\a>)
+ * ).
+ */
+
+
 
 namespace dualres {
-  /*! @addtogroup dualres
+  /*! @addtogroup nifti_manipulation
    * @{
    */
 
@@ -123,7 +129,7 @@ namespace dualres {
    * @param read_data The value \c 0 instructs to read header info; 
    *   value \c 1 additionally reads NIfTI "brick" data
    */
-  ::nifti_image* nifti_image_read(const std::string &hname, int read_data);
+  ::nifti_image * nifti_image_read(const std::string &hname, int read_data);
 
   
   void nifti_image_write(::nifti_image* nii, std::string new_filename = "");

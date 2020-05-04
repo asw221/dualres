@@ -40,7 +40,7 @@ int main(int argc, char *argv[]) {
   bool error_status = false;
   scalar_type radius = inputs.radius();
   std::ostringstream new_fname_stream;
-  ::nifti_image* _nii;
+  nifti_image* _nii;
   std::vector<scalar_type> _nii_data, _nii_smoothed_data;
 
   try {
@@ -52,7 +52,7 @@ int main(int argc, char *argv[]) {
         dualres::qform_matrix(_nii)).array().maxCoeff();
     }
 
-    new_fname_stream << ::nifti_makebasename(_nii->fname) << "_"
+    new_fname_stream << nifti_makebasename(_nii->fname) << "_"
 		     << ((int)inputs.fwhm()) << "mm_fwhm";
 
     
@@ -87,7 +87,7 @@ int main(int argc, char *argv[]) {
     dualres::nifti_image_write(_nii,
       (new_fname_stream.str() + "_simdata.nii"));
     
-    ::nifti_image_free(_nii);
+    nifti_image_free(_nii);
   }
   catch (const std::exception &__err) {
     error_status = true;

@@ -97,6 +97,7 @@ namespace dualres {
     bool error() const;
     bool help_invoked() const;
     bool operator!() const;
+    double xtol_rel() const;
     std::string image_file() const;
     std::string output_file() const;
     scalar_type parameter(const int which) const;
@@ -105,11 +106,13 @@ namespace dualres {
     typename std::vector<scalar_type>::const_iterator kernel_cend() const;
     operator bool() const;
 
+    void show_help() const;
     void show_usage() const;
 
   private:
     call_status _status;
     bool _use_constraint;
+    double _xtol;
     std::string _image_file;
     std::string _output_file;
     std::vector<scalar_type> _kernel_params;

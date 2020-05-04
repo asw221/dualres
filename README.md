@@ -21,9 +21,12 @@ make
  
 #### To-do
  - Enhance comments and help pages
- - RBF parameter estimation: add option for fixed covariance
-   parameters & toggle constraint
  - Convenient interface to check proportion of positive eigen values
    for given kernel function/image space
  - Add utility to convert image data types (double -> float) or vice
    versa
+ - Would eventually like to write wrapping classes for `nifti_image`
+   pointers and covariance parameters
+ - Add options & utilities for masking images
+ - [_Done_] RBF parameter estimation: add option for fixed covariance
+   parameters & toggle constraint

@@ -3,6 +3,7 @@
 #include <fstream>
 #include <iostream>
 #include <nifti1_io.h>
+#include <stdexcept>
 #include <vector>
 
 #include "dualres/CommandParser.h"
@@ -72,14 +73,33 @@ int main(int argc, char *argv[]) {
   
   std::cout << "Estimating smoothness (radial basis function approximation)... "
 	    << std::flush;
-  dualres::compute_rbf_parameters(theta, mce, inputs.use_constraint());
+  try {
+    dualres::compute_rbf_parameters(theta, mce, inputs.use_constraint(),
+      inputs.parameter(0), inputs.parameter(1), inputs.parameter(2),
+      inputs.xtol_rel()
+    );
+  }
+  catch (const std::exception &__err) {
+    std::cerr << "\n"
+	      << "Exception caught with message:\n'"
+	      << __err.what() << "'\n"
+	      << std::endl;
+    return 1;
+  }
+  catch (...) {
+    std::cerr << "\n"
+	      << "Error: unable to estimate covariance parameters "
+	      << "(unknown cause)"
+	      << std::endl;
+    return 1;
+  }
   std::cout << "Done!" << std::endl;
   std::cout << "  Marg. Var. = " << theta[0] << "\n"
 	    << "  Bandwidth  = " << theta[1] << "\n"
 	    << "  Exponent   = " << theta[2] << "\n"
-	    << "  (FWHM      = "
+	    << "  <FWHM      = "
 	    << dualres::kernels::rbf_bandwidth_to_fwhm(theta[1], theta[2])
-	    << ")\n"
+	    << " (mm)>\n"
 	    << std::endl;
   
 };

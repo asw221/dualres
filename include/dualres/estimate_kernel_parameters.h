@@ -36,7 +36,7 @@ namespace dualres {
   
 
   template< typename Scalar = float >
-  dualres::mce_data compute_mce_summary_data_impl(const nifti_image* const img) {
+  dualres::mce_data compute_mce_summary_data_impl(const ::nifti_image* const img) {
     const int nx = img->nx, ny = img->ny, nvox = (int)img->nvox;
     Scalar* dataPtr = (Scalar*)img->data;
     double voxel_value_x, voxel_value_y;
@@ -80,7 +80,7 @@ namespace dualres {
 
 
 
-  dualres::mce_data compute_mce_summary_data(const nifti_image* const img) {
+  dualres::mce_data compute_mce_summary_data(const ::nifti_image* const img) {
     const dualres::nifti_data_type dtype = dualres::nii_data_type(img);
     if (dtype == dualres::nifti_data_type::FLOAT)
       return dualres::compute_mce_summary_data_impl<float>(img);
@@ -132,16 +132,49 @@ namespace dualres {
   int compute_rbf_parameters(
     std::vector<double> &theta,
     const dualres::mce_data &data,
-    const bool constrained = true
+    const bool constrained = true,
+    const double variance = -1,
+    const double bandwidth = -1,
+    const double exponent = -1,
+    const double xtol = 1e-5
   ) {
     const int K = 3;  // 3 parameters, rbf model
     const double tau_max = (double)data.covariance[0], eps0 = 1e-5;
     double min_obj;
-    int retval = 0;
+    int retval = 0, n_fixed = 0;
     std::vector<double> _x, _y;
     kernel_data objective_data;
     std::vector<double> lb{eps0, eps0, eps0};
     std::vector<double> ub{tau_max, HUGE_VAL, 2.0 - eps0};
+    // Modify lower/upper bounds for "fixed" parameters
+    if ((variance - eps0) > 0) {
+      lb[0] = variance - eps0;
+      ub[0] = variance + eps0;
+      theta[0] = variance;
+      n_fixed++;
+    }
+    if ((exponent - eps0) > 0 && (exponent + eps0) <= 2.0) {
+      lb[2] = exponent - eps0;
+      ub[2] = exponent + eps0;
+      theta[2] = exponent;
+      theta[1] = exponent / 2;  // For validity if constrained == true
+      n_fixed++;
+    }
+    if ((bandwidth - eps0) > 0) {
+      lb[1] = bandwidth - eps0;
+      ub[1] = bandwidth + eps0;
+      theta[1] = bandwidth;
+      n_fixed++;
+    }
+    if (constrained && theta[1] > theta[2]) {
+      throw std::domain_error(
+        "compute_rbf_parameters: requested constraint with bandwidth > exponent");
+    }
+    if (n_fixed == K) {
+      return retval;  // Optimization would be redundant
+    }
+    //
+    // Initialize optimization
     nlopt::opt optimizer(nlopt::LN_COBYLA, K);
     // Prepare data
     _x.reserve(data.npairs.size());
@@ -160,8 +193,8 @@ namespace dualres {
     optimizer.set_upper_bounds(ub);
     optimizer.set_min_objective(dualres::_rbf_least_squares, &objective_data);
     if (constrained)
-      optimizer.add_inequality_constraint(dualres::_rbf_constraint, NULL, eps0 / 100);
-    optimizer.set_xtol_rel(1e-5);
+      optimizer.add_inequality_constraint(dualres::_rbf_constraint, NULL, xtol);
+    optimizer.set_xtol_rel(xtol);
     try {
       optimizer.optimize(theta, min_obj);
     }

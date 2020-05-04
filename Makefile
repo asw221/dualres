@@ -10,7 +10,7 @@ EXECDIR := bin
 EIGEN3_DIR := /usr/local/include/eigen3
 
 INC := -Iinclude -Ilib/nifti/include -I$(EIGEN3_DIR) -I/usr/local/include
-LIB := -Llib/nifti/lib -L/usr/local/lib -lniftiio -lznz -lz -lm -lnlopt -lboost_filesystem -lfftw3f -lfftw3f_omp -Xpreprocessor -fopenmp -lomp
+LIB := -Llib/nifti/lib -L/usr/local/lib -lniftiio -lznz -lz -lnlopt -lboost_filesystem -lfftw3f -lfftw3f_omp -Xpreprocessor -fopenmp -lomp -lm
 
 
 
@@ -19,28 +19,28 @@ all: dualgpm clear_fftw_history estimate_rbf estimate_snr gaussian_smooth image_
 
 
 dualgpm: $(SRCDIR)/dualgpm.cpp
-	$(CXX) $(CXXFLAGS) $(INC) $(LIB) -o $(EXECDIR)/dualgpm $<
+	$(CXX) $< $(CXXFLAGS) $(INC) $(LIB) -o $(EXECDIR)/dualgpm
 
 clear_fftw_history: $(SRCDIR)/clear_fftw_history.cpp
-	$(CXX) $(CXXFLAGS) $(INC) $(LIB) -o $(EXECDIR)/clear_fftw_history $<
+	$(CXX) $< $(CXXFLAGS) $(INC) $(LIB) -o $(EXECDIR)/clear_fftw_history
 
 estimate_rbf: $(SRCDIR)/estimate_rbf.cpp
-	$(CXX) $(CXXFLAGS) $(INC) $(LIB) -o $(EXECDIR)/estimate_rbf $<
+	$(CXX) $< $(CXXFLAGS) $(INC) $(LIB) -o $(EXECDIR)/estimate_rbf
 
 estimate_snr: $(SRCDIR)/estimate_snr.cpp
-	$(CXX) $(CXXFLAGS) $(INC) $(LIB) -o $(EXECDIR)/estimate_snr $<
+	$(CXX) $< $(CXXFLAGS) $(INC) $(LIB) -o $(EXECDIR)/estimate_snr
 
 gaussian_smooth: $(SRCDIR)/gaussian_smooth.cpp
-	$(CXX) $(CXXFLAGS) $(INC) $(LIB) -o $(EXECDIR)/gaussian_smooth $<
+	$(CXX) $< $(CXXFLAGS) $(INC) $(LIB) -o $(EXECDIR)/gaussian_smooth
 
 image_info: $(SRCDIR)/image_info.cpp
-	$(CXX) $(CXXFLAGS) $(INC) $(LIB) -o $(EXECDIR)/image_info $<
+	$(CXX) $< $(CXXFLAGS) $(INC) $(LIB) -o $(EXECDIR)/image_info
 
 preplan_fft: $(SRCDIR)/preplan_fft.cpp
-	$(CXX) $(CXXFLAGS) $(INC) $(LIB) -o $(EXECDIR)/preplan_fft $<
+	$(CXX) $< $(CXXFLAGS) $(INC) $(LIB) -o $(EXECDIR)/preplan_fft
 
 rbf_neighborhood: $(SRCDIR)/rbf_neighborhood.cpp
-	$(CXX) $(CXXFLAGS) $(INC) $(LIB) -o $(EXECDIR)/rbf_neighborhood $<
+	$(CXX) $< $(CXXFLAGS) $(INC) $(LIB) -o $(EXECDIR)/rbf_neighborhood
 
 simulate_data_from_image: $(SRCDIR)/simulate_data_from_image.cpp
-	$(CXX) $(CXXFLAGS) $(INC) $(LIB) -o $(EXECDIR)/simulate_data_from_image $<
+	$(CXX) $< $(CXXFLAGS) $(INC) $(LIB) -o $(EXECDIR)/simulate_data_from_image

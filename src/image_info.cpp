@@ -20,8 +20,8 @@ int main(int argc, char *argv[]) {
   
   const std::string _input_image_file(argv[1]);
   bool error_status = false;
-  ::nifti_image* _nii;
-  Eigen::Vector3f _voxel_dims;
+  // ::nifti_image* _nii;
+  // Eigen::Vector3f _voxel_dims;
   
   if (!dualres::is_nifti_file(_input_image_file)) {
     std::cerr << "image_info: requires one NIfTI file as input\n";
@@ -30,7 +30,7 @@ int main(int argc, char *argv[]) {
   
 
   try {
-    _nii = dualres::nifti_image_read(_input_image_file, 0);
+    ::nifti_image* _nii = dualres::nifti_image_read(_input_image_file, 0);
     // _voxel_dims = dualres::voxel_dimensions(_nii);
     
     std::cout << _input_image_file << ":\n"
@@ -47,7 +47,7 @@ int main(int argc, char *argv[]) {
 	      << _nii->dx << ", " << _nii->dy << ", " << _nii->dz
 	      << ")\n";
 
-    ::nifti_image_free(_nii);
+    // ::nifti_image_free(_nii);
   }
   catch (const std::exception &__err) {
     error_status = true;

@@ -40,7 +40,7 @@ int main(int argc, char *argv[]) {
   scalar_type _signal_second_moment = 0, _noise_second_moment = 0;
   scalar_type _snr;
   
-  ::nifti_image* _nii;
+  nifti_image* _nii;
   std::vector<scalar_type> _nii_data, _nii_smoothed_data;
   
 
@@ -71,7 +71,7 @@ int main(int argc, char *argv[]) {
     _snr = _signal_second_moment / _noise_second_moment;
     std::cout << std::setprecision(6) << std::fixed << _snr << std::endl;
 
-    ::nifti_image_free(_nii);
+    nifti_image_free(_nii);
   }
   catch (const std::exception &__err) {
     error_status = true;

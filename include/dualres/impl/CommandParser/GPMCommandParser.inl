@@ -36,7 +36,8 @@ void dualres::GPMCommandParser<T>::show_help() const {
 	    << "\t--theta    alias for --covariance\n"
 	    << "\t--thin     int  thinning factor for MCMC samples\n"
 	    << "\t--threads  int  number of threads for parallel computations\n"
-	    << "\nimg[1-2] are valid NIfTI files and f[1-3] are parameters "
+	    << "\n"
+	    << "img[1-2] are valid NIfTI files and f[1-3] are parameters "
 	    << "of an exponential radial covariance function."
 	    << "\n\n";
 };
