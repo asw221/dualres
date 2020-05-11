@@ -61,7 +61,7 @@ int main(int argc, char *argv[]) {
 
     // Compute "residuals" into _nii_data and update moment info
     _nii_smoothed_data = dualres::get_nonzero_data<scalar_type>(_nii);
-    for (int i = 0; i < _nii_data.size(); i++) {
+    for (int i = 0; i < (int)_nii_data.size(); i++) {
       _nii_data[i] -= _nii_smoothed_data[i];
 
       _signal_second_moment += _nii_smoothed_data[i] * _nii_smoothed_data[i];

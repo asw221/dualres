@@ -10,8 +10,20 @@
 
 
 
-namespace dualres {
+#ifndef _DUALRES_SMOOTHING_
+#define _DUALRES_SMOOTHING_
 
+
+/*! @defgroup Smoothing
+ *
+ * Smooth input image with a local radial basis function kernel
+*/
+
+
+namespace dualres {
+  /*! @addtogroup Smoothing
+   * @{
+   */
   
 
   template< typename ImageType = float >
@@ -116,9 +128,9 @@ namespace dualres {
       throw std::runtime_error("local_rbf_smooth: unrecognized image data type");
   };
   
-  
-}
+  /*! @} */
+}  // namespace dualres
 
 
 
-
+#endif  // _DUALRES_SMOOTHING_

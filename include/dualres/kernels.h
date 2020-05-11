@@ -8,6 +8,9 @@ namespace dualres {
   
 
   namespace kernels {
+    /*! @addtogroup GaussianProcessModels 
+     * @{
+     */
 
     // scalar version
     template< typename T >
@@ -34,8 +37,9 @@ namespace dualres {
     template< typename T >
     T rbf_fwhm_to_bandwidth(const T &fwhm, const T &exponent = 1.9999);
 
-    
-  };
+
+    /*! @} */
+  }  // namespace kernels 
   
 }
 

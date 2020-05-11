@@ -612,7 +612,7 @@ dualres::MultiResParameters<T>::update(
   // _set_real_mu(_mu);
   // ^^ _real_mu must be set before _update_sigma_sq_inv(), _update_tau_sq_inv()
   _update_sigma_sq_inv(data);
-  // _update_tau_sq_inv();
+  _update_tau_sq_inv();
   return std::min((scalar_type)1.0, R);
 };
 
@@ -753,7 +753,7 @@ void dualres::MultiResParameters<T>::_update_tau_sq_inv() {
   // _real_mu must be set/updated before _update_tau_sq_inv is called
   const scalar_type shape = 0.5 * _real_mu.size() + 1;
   const scalar_type rate = 0.5 * _real_mu.squaredNorm();
-  const std::gamma_distribution<scalar_type> Gamma(shape, 1 / rate);
+  std::gamma_distribution<scalar_type> Gamma(shape, 1 / rate);
   const scalar_type tau_sq_inv_star = Gamma(dualres::rng());
   _lambda *= tau_sq_inv_star / _tau_sq_inv;
   _tau_sq_inv = tau_sq_inv_star;

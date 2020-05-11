@@ -21,16 +21,23 @@
 #define _DUALRES_GAUSSIAN_PROCESS_MODEL_
 
 
+/*! @defgroup GaussianProcessModels
+ * 
+ * Gaussian process modeling for single/dual resolution models. Header 
+ * information defined in gaussian_process_model.h
+ */
+
 
 namespace dualres {
-
 
 
   namespace gaussian_process {
 
 
     namespace sor_approx {
-
+      /*! @addtogroup GaussianProcessModels
+       * @{
+       */
       
       template< typename T >
       class mcmc_summary {
@@ -121,6 +128,7 @@ namespace dualres {
 	      _output_stream_ << sigma[i] << "\t";
 	    }
 	    log_posterior = _theta_.log_posterior(_data_);
+	    _output_stream_ << _theta_.tau() << "\t";
 	    _output_stream_ << log_posterior;
 	    if (save_count < (_hmc_.n_save() - 1))
 	      _output_stream_ << std::endl;
@@ -141,10 +149,10 @@ namespace dualres {
       };
 
 
-      
-    }  // namespace sor_approx
-  }  // namespace gaussian_process
-}  // namespace dualres
+      /*! @} */
+    }  // namespace sor_approx ---------------------------------------
+  }  // namespace gaussian_process -----------------------------------
+}  // namespace dualres ----------------------------------------------
 
 
 
@@ -182,7 +190,7 @@ void dualres::gaussian_process::sor_approx::mcmc_summary<T>::update(
     throw std::domain_error("sigma dimension mismatch");
   _first_moment_mu += mu;
   _second_moment_mu += (mu.array() * mu.array()).matrix();
-  for (int i = 0; i < _sigma.size(); i++) {
+  for (int i = 0; i < (int)_sigma.size(); i++) {
     _sigma[i] += sigma[i];
   }
   _log_posterior += log_posterior;
@@ -225,7 +233,7 @@ template< typename T >
 std::vector<typename dualres::gaussian_process::sor_approx::mcmc_summary<T>::scalar_type>
 dualres::gaussian_process::sor_approx::mcmc_summary<T>::mode_sigma() const {
   std::vector<scalar_type> __mode(_sigma.size());
-  for (int i = 0; i < _sigma.size(); i++)
+  for (int i = 0; i < (int)_sigma.size(); i++)
     __mode[i] = _sigma[i] / samples();
   return __mode;
 };

@@ -8,7 +8,8 @@
 
 template< typename T >
 void dualres::EstimRbfCommandParser<T>::show_usage() const {
-  std::cerr << "\nUsage:\n"
+  std::cerr << "Estimate voxel-wise radial basis function covariance parameters:\n"
+            << "Usage:\n"
 	    << "\testimate_rbf path/to/img <options>\n\n";
 };
 
@@ -17,13 +18,13 @@ template< typename T >
 void dualres::EstimRbfCommandParser<T>::show_help() const {
   show_usage();
   std::cerr << "Options:\n"
-	    << "\t--bandwidth f1  fixes correlation bandwidth parameter to f1\n"
-	    << "\t--constraint    imposes a bandwidth <= exponent constraint\n"
-	    << "\t--exponent  f1  fixes correlation exponent parameter to f1\n"
-	    << "\t--mask path/to/mask_img  ~~NOT IMPLEMENTED~~\n"
-	    << "\t--output ofile/basename  output file for MCE summary data\n"
-	    << "\t--variance  f1  fixes the marginal variance parameter to f1\n"
-	    << "\t--xtol      f1  set the numerical tolerance (default 1e-5)\n"
+	    << "\t--bandwidth float  fixes correlation bandwidth parameter\n"
+	    << "\t--constraint       imposes a bandwidth <= exponent constraint\n"
+	    << "\t--exponent  float  fixes correlation exponent parameter\n"
+	    << "\t--mask   path/to/mask_img  ~~NOT IMPLEMENTED~~\n"
+	    << "\t--output ofile/basename    output file for MCE summary data\n"
+	    << "\t--variance  float  fixes the marginal variance parameter\n"
+	    << "\t--xtol      float  set the numerical tolerance (default 1e-5)\n"
 	    << "\n"
 	    << "Computes minimum contrast estimation (MCE) data from the input NIfTI\n"
 	    << "image file. This data summarizes empirical covariances between pairs\n"
@@ -66,8 +67,8 @@ dualres::EstimRbfCommandParser<T>::EstimRbfCommandParser(int argc, char **argv) 
   _kernel_params.resize(3);
   for (int i = 0; i < 3; i++)
     _kernel_params[i] = -1;
+  
   if (argc < 2) {
-    show_usage();
     _status = call_status::error;
   }
   else {

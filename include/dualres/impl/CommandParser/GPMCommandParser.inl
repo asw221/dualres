@@ -14,7 +14,8 @@
 
 template< typename T >
 void dualres::GPMCommandParser<T>::show_usage() const {
-  std::cerr << "\nUsage:\n"
+  std::cerr << "Fit dual (or single) resolution Gaussian process model to NIfTI data:\n"
+	    << "Usage:\n"
 	    << "\tdualgpm --highres path/to/img1 <options>\n\n";
 };
 
@@ -23,19 +24,19 @@ template< typename T >
 void dualres::GPMCommandParser<T>::show_help() const {
   show_usage();
   std::cerr << "Options:\n"
-	    << "\t--burnin   int  number of MCMC burnin iterations\n"
-	    << "\t--covariance   f1 f2 f3  Gaussian process covariance parameters\n"
-	    << "\t--debug         instruction to run a short debug-length MCMC chain\n"
-	    << "\t--leapfrog int  number of MCMC integrator steps\n"
-	    << "\t--monitor       monitor MCMC iterations (useful for debugging)\n"
-	    << "\t--neighborhood f1  neighborhood size (mm) for kriging approximation\n"
-	    << "\t--nsave    int  number of MCMC samples to save in output\n"
-	    << "\t--output   file/basename  valid path prefix for output files\n"
-	    << "\t--seed     int  RNG seed\n"
-	    << "\t--stdres   path/to/img2\n"
-	    << "\t--theta    alias for --covariance\n"
-	    << "\t--thin     int  thinning factor for MCMC samples\n"
-	    << "\t--threads  int  number of threads for parallel computations\n"
+	    << "\t--burnin       int        number of MCMC burnin iterations\n"
+	    << "\t--covariance   f1 f2 f3   RBF covariance parameters\n"
+	    << "\t--debug                   run a short debug-length MCMC chain\n"
+	    << "\t--leapfrog     int        number of MCMC integrator steps\n"
+	    << "\t--monitor                 monitor MCMC iterations (debugging)\n"
+	    << "\t--neighborhood float      n'hood size (mm) for kriging approx\n"
+	    << "\t--nsave        int        MCMC samples to save in output\n"
+	    << "\t--output   file/basename  path prefix for output files\n"
+	    << "\t--seed         int        RNG seed\n"
+	    << "\t--stdres   path/to/img2   \n"
+	    << "\t--theta                   alias for --covariance\n"
+	    << "\t--thin         int        thinning factor for MCMC samples\n"
+	    << "\t--threads      int        number of parallel threads\n"
 	    << "\n"
 	    << "img[1-2] are valid NIfTI files and f[1-3] are parameters "
 	    << "of an exponential radial covariance function."
@@ -97,7 +98,7 @@ dualres::GPMCommandParser<T>::GPMCommandParser(int argc, char* argv[]) {
   
   // _covariance_params.resize(3);
   if (argc < 2) {
-    show_usage();
+    _status = call_status::error;
   }
   else {
     for (int i = 1; i < argc; i++) {
@@ -125,7 +126,7 @@ dualres::GPMCommandParser<T>::GPMCommandParser(int argc, char* argv[]) {
       else if ((arg == "--covariance") || (arg == "--theta")) {
 	if (i + K < argc) {
 	  _covariance_params.resize(K);
-	  for (int j = 0; j < _covariance_params.size(); j++) {
+	  for (int j = 0; j < (int)_covariance_params.size(); j++) {
 	    i++;
 	    try {
 	      _covariance_params[j] = (scalar_type)std::stod(argv[i]);

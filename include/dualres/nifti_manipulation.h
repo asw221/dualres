@@ -15,8 +15,7 @@
  * 
  * Collection of functions to extract data and summary information
  * from \c nifti_image structures (defined in 
- * <a href="https://nifti.nimh.nih.gov/pub/dist/src/niftilib/nifti1_io.h">nifti1_io.h<\a>)
- * ).
+ * <a href="https://nifti.nimh.nih.gov/pub/dist/src/niftilib/nifti1_io.h">nifti1_io.h</a>).
  */
 
 

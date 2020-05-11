@@ -16,7 +16,20 @@
 #define _DUALRES_ESTIMATE_KERNEL_PARAMETERS_
 
 
+/*! @defgroup SmoothnessEstimation
+ * 
+ * Collection of routines to estimate image-wide covariance function
+ * from \c nifti_image structures (defined in 
+ * <a href="https://nifti.nimh.nih.gov/pub/dist/src/niftilib/nifti1_io.h">nifti1_io.h</a>).
+ * Implementation of Minimum Contrast Estimation (MCE).
+ */
+
+
+
 namespace dualres {
+  /*! @addtogroup SmoothnessEstimation
+   * @{
+   */
 
 
 
@@ -206,7 +219,7 @@ namespace dualres {
   };
   
 
-  
+  /*! @} */  
 }
 
 

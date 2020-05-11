@@ -10,6 +10,9 @@
 
 
 namespace dualres {
+  /*! @addtogroup GaussianProcessModels
+   * @{
+   */
 
 
   struct lambda_profile {
@@ -31,7 +34,7 @@ namespace dualres {
   );
 
 
-
+  /*! @} */
 }
 
 

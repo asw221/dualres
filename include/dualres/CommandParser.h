@@ -139,6 +139,7 @@ namespace dualres {
     operator bool() const;
 
     void show_usage() const;
+    void show_help() const;
 
   private:
     call_status _status;

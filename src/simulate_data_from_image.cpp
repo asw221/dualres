@@ -16,6 +16,7 @@
 #include "dualres/utilities.h"
 
 
+
 int main(int argc, char *argv[]) {
   typedef float scalar_type;
   typedef typename Eigen::Matrix<scalar_type, Eigen::Dynamic, 1> VectorType;
@@ -49,10 +50,10 @@ int main(int argc, char *argv[]) {
   
     if (radius <= 0) {
       radius = 3 * (scalar_type)dualres::voxel_dimensions(
-        dualres::qform_matrix(_nii)).array().maxCoeff();
+        _nii).array().maxCoeff();
     }
 
-    new_fname_stream << nifti_makebasename(_nii->fname) << "_"
+    new_fname_stream << ::nifti_makebasename(_nii->fname) << "_"
 		     << ((int)inputs.fwhm()) << "mm_fwhm";
 
     
@@ -69,7 +70,7 @@ int main(int argc, char *argv[]) {
     // --- Data simulation -------------------------------------------
     // Compute "residuals" into _nii_data
     _nii_smoothed_data = dualres::get_nonzero_data<scalar_type>(_nii);
-    for (int i = 0; i < _nii_data.size(); i++) {
+    for (int i = 0; i < (int)_nii_data.size(); i++) {
       _nii_data[i] -= _nii_smoothed_data[i];
     }
     
@@ -77,7 +78,7 @@ int main(int argc, char *argv[]) {
     std::shuffle(_nii_data.begin(), _nii_data.end(), dualres::rng());
 
     // Add mean field back
-    for (int i = 0; i < _nii_data.size(); i++) {
+    for (int i = 0; i < (int)_nii_data.size(); i++) {
       _nii_data[i] += _nii_smoothed_data[i];
     }
     dualres::emplace_nonzero_data<scalar_type>(
@@ -87,7 +88,7 @@ int main(int argc, char *argv[]) {
     dualres::nifti_image_write(_nii,
       (new_fname_stream.str() + "_simdata.nii"));
     
-    nifti_image_free(_nii);
+    ::nifti_image_free(_nii);
   }
   catch (const std::exception &__err) {
     error_status = true;

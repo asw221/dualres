@@ -11,14 +11,17 @@
 
 
 namespace dualres {
-  /*! @addtogroup dualres
+  /*! @addtogroup Dualres
    * @{
    */
   
 
   typedef boost::filesystem::path path;
 
-  
+
+  /*!
+   * Unused, currently.
+   */
   enum class use_lambda_method { PROFILE, NATIVE, EXTENDED };
 
 
@@ -35,7 +38,6 @@ namespace dualres {
   
 
   /// @cond INTERNAL
-  
   namespace __internals {
 
     typedef std::mt19937 rng_type;
@@ -62,7 +64,6 @@ namespace dualres {
     
   }
   // namespace __internals
-
   /// @endcond
 
   

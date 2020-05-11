@@ -19,7 +19,10 @@
 #define _DUALRES_KRIGING_MATRIX_
 
 
-namespace dualres {  
+namespace dualres {
+  /*! @addtogroup GaussianProcessModels
+   * @{
+   */
   
 
   template< typename T = float >
@@ -331,7 +334,7 @@ namespace dualres {
 
 
   
-  
+  /*! @} */  
 }  // namespace dualres 
 
 

@@ -14,6 +14,9 @@
 
 
 namespace dualres {
+  /*! @addtogroup Dualres
+   * @{
+   */
 
   bool initialize_temporary_directory();
   
@@ -34,11 +37,14 @@ namespace dualres {
   };
   
 
+  /*! @} */
 
-  
   
 
   namespace utilities {
+    /*! @addtogroup Dualres
+     * @{
+     */
 
     
     bool file_exists(const std::string &fname);
@@ -67,13 +73,11 @@ namespace dualres {
     };
 
     
-    
+    /*! @} */    
   }  // namespace utilities ------------------------------------------
 
 
 
-
-  
 }  // namespace dualres ----------------------------------------------
 
 
