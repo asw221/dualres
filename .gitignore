@@ -6,6 +6,12 @@ bin
 Doxyfile
 doc
 
+# Ignore objects and archived libraries
+*.a
+*.o
+lib/nifti/lib/*/*.a
+lib/nifti/lib/*/*.o
+
 # Ignore any executables
 bin/*
 Makefile
