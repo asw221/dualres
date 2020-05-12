@@ -21,7 +21,7 @@ int main(int argc, char *argv[]) {
   typedef float scalar_type;
   typedef typename Eigen::Matrix<scalar_type, Eigen::Dynamic, 1> VectorType;
 
-  const dualres::SmoothingCommandParser<scalar_type> inputs(argc, argv);
+  const dualres::SimulationCommandParser<scalar_type> inputs(argc, argv);
   if (!inputs)
     return 1;
   else if (inputs.help_invoked())
@@ -33,16 +33,19 @@ int main(int argc, char *argv[]) {
     - Add permutation of actual residuals back to smooth
     - Write out '*_activation.nii' and '*_simdata.nii' files
    */
-  
+
+  dualres::set_seed(inputs.seed());
   
   const scalar_type bandwidth = dualres::kernels::rbf_fwhm_to_bandwidth(
     inputs.fwhm(), inputs.exponent());
 
+  const bool _mean_image_available = !inputs.mean_image_file().empty();
+  
   bool error_status = false;
   scalar_type radius = inputs.radius();
   std::ostringstream new_fname_stream;
   nifti_image* _nii;
-  std::vector<scalar_type> _nii_data, _nii_smoothed_data;
+  std::vector<scalar_type> _nii_data, _nii_mean_field;
 
   try {
     _nii = dualres::nifti_image_read(inputs.image_file(), 1);
@@ -53,14 +56,22 @@ int main(int argc, char *argv[]) {
         _nii).array().maxCoeff();
     }
 
-    new_fname_stream << ::nifti_makebasename(_nii->fname) << "_"
-		     << ((int)inputs.fwhm()) << "mm_fwhm";
+    new_fname_stream << ::nifti_makebasename(_nii->fname);
 
-    
+    // If mean image is not given, use RBF smooth as mean
+    if (!_mean_image_available) {
+      new_fname_stream << "_" << ((int)inputs.fwhm()) << "mm_fwhm";
 
-    // Use RBF smoothing as a "nonparametric" estimate of
-    // true activation
-    dualres::local_rbf_smooth(_nii, radius, bandwidth, inputs.exponent());
+      // Use RBF smoothing as a "nonparametric" estimate of
+      // true activation
+      dualres::local_rbf_smooth(_nii, radius, bandwidth, inputs.exponent());
+    }
+    else {
+      // new_fname_stream << "mean";
+      ::nifti_image_free(_nii);
+      
+      _nii = dualres::nifti_image_read(inputs.mean_image_file(), 1);
+    }
 
     // Write "true" activation image
     dualres::nifti_image_write(_nii,
@@ -69,9 +80,9 @@ int main(int argc, char *argv[]) {
 
     // --- Data simulation -------------------------------------------
     // Compute "residuals" into _nii_data
-    _nii_smoothed_data = dualres::get_nonzero_data<scalar_type>(_nii);
+    _nii_mean_field = dualres::get_nonzero_data<scalar_type>(_nii);
     for (int i = 0; i < (int)_nii_data.size(); i++) {
-      _nii_data[i] -= _nii_smoothed_data[i];
+      _nii_data[i] -= _nii_mean_field[i];
     }
     
     // Permute residuals
@@ -79,7 +90,7 @@ int main(int argc, char *argv[]) {
 
     // Add mean field back
     for (int i = 0; i < (int)_nii_data.size(); i++) {
-      _nii_data[i] += _nii_smoothed_data[i];
+      _nii_data[i] += _nii_mean_field[i];
     }
     dualres::emplace_nonzero_data<scalar_type>(
       _nii, Eigen::Map<VectorType>(_nii_data.data(), _nii_data.size()));

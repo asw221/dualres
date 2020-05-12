@@ -13,10 +13,9 @@
 #### Installation
 Using cmake with dependencies installed:
 ```
-cd dualres/lib/nifti
-make clean && make all
+cd dualres/lib/nifti && make all
 mkdir ../../build && cd ../../build
-cmake ..
+cmake .. -DCMAKE_BUILD_TYPE=Release
 make
 ```
  

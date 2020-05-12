@@ -157,6 +157,7 @@ namespace dualres {
     typedef T scalar_type;
     enum class call_status { success, error, help };
 
+    SmoothingCommandParser();
     SmoothingCommandParser(int argc, char **argv);
     bool error() const;
     bool help_invoked() const;
@@ -170,7 +171,7 @@ namespace dualres {
     void show_help() const;
     void show_usage() const;
 
-  private:
+  protected:
     call_status _status;
     scalar_type _exponent;
     scalar_type _fwhm;
@@ -179,6 +180,29 @@ namespace dualres {
     std::string _image_file;
   };
 
+
+
+
+  
+  template< typename T = float >
+  class SimulationCommandParser : public dualres::SmoothingCommandParser<T> {
+  public:
+    typedef T scalar_type;
+    typedef typename SmoothingCommandParser<scalar_type>::call_status call_status;
+
+    SimulationCommandParser(int argc, char **argv);
+    std::string mean_image_file() const;
+    unsigned int seed() const;
+
+    void show_help() const;
+
+  private:
+    std::string _mean_image;
+    unsigned int _seed;
+  };
+
+
+  
 
 
 

@@ -49,7 +49,6 @@ set_target_properties(clear_fftw_history PROPERTIES
 add_executable(estimate_rbf estimate_rbf.cpp)
 target_link_libraries(estimate_rbf Boost::filesystem Eigen3::Eigen
 		NLOPT::nlopt libniftiio.a libznz.a ZLIB::ZLIB)
-		# zlib.dylib
 set_target_properties(estimate_rbf PROPERTIES RUNTIME_OUTPUT_DIRECTORY
 		"${CMAKE_BINARY_DIR}/bin")
 
@@ -83,7 +82,6 @@ add_executable(preplan_fft preplan_fft.cpp)
 target_link_libraries(preplan_fft Boost::filesystem FFTW::FloatOpenMP
 		FFTW::Float Eigen3::Eigen OpenMP::OpenMP_CXX
 		libniftiio.a libznz.a ZLIB::ZLIB)
-		# libz.dylib
 set_target_properties(preplan_fft PROPERTIES RUNTIME_OUTPUT_DIRECTORY
 		"${CMAKE_BINARY_DIR}/bin")
 
@@ -93,6 +91,5 @@ set_target_properties(preplan_fft PROPERTIES RUNTIME_OUTPUT_DIRECTORY
 add_executable(rbf_neighborhood rbf_neighborhood.cpp)
 target_link_libraries(rbf_neighborhood Boost::filesystem Eigen3::Eigen
 		libniftiio.a libznz.a ZLIB::ZLIB)
-		# libz.dylib
 set_target_properties(rbf_neighborhood PROPERTIES
 		RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
