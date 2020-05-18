@@ -28,6 +28,7 @@ void dualres::GPMCommandParser<T>::show_help() const {
 	    << "\t--covariance   f1 f2 f3   RBF covariance parameters\n"
 	    << "\t--debug                   run a short debug-length MCMC chain\n"
 	    << "\t--leapfrog     int        number of MCMC integrator steps\n"
+	    << "\t--mhtarget     float      target metropolis hastings rate\n"
 	    << "\t--monitor                 monitor MCMC iterations (debugging)\n"
 	    << "\t--neighborhood float      n'hood size (mm) for kriging approx\n"
 	    << "\t--nsave        int        MCMC samples to save in output\n"
@@ -64,6 +65,7 @@ dualres::GPMCommandParser<T>::GPMCommandParser(int argc, char* argv[]) {
   _mcmc_leapfrog_steps = 10;
   _mcmc_nsave = 1000;
   _mcmc_thin = 1;
+  _mcmc_mhtarget = 0.65;
   _monitor = false;
   _seed = static_cast<unsigned int>(
     std::chrono::duration_cast<std::chrono::milliseconds>(time).count());
@@ -80,6 +82,8 @@ dualres::GPMCommandParser<T>::GPMCommandParser(int argc, char* argv[]) {
     "\nWarning: --covariance option requires 3 numeric arguments\n";
   const std::string _MESSAGE_IMPROPER_LEAPFROG =
     "\nWarning: --leapfrog option requires 1 positive integer argument\n";
+  const std::string _MESSAGE_IMPROPER_MHTARGET =
+    "\nWarning: --mhtarget option requires 1 numeric argument on (0, 1)\n";
   const std::string _MESSAGE_IMPROPER_NEIGHBORHOOD =
     "\nWarning: --neighborhood option requires 1 numeric argument\n";
   const std::string _MESSAGE_IMPROPER_NSAVE =
@@ -177,6 +181,24 @@ dualres::GPMCommandParser<T>::GPMCommandParser(int argc, char* argv[]) {
 	}
 	else {
 	  std::cerr << _MESSAGE_IMPROPER_LEAPFROG;
+	  _status = call_status::error;
+	}
+      }
+      else if (arg == "--mhtarget") {
+	if (i + 1 < argc) {
+	  i++;
+	  try {
+	    _mcmc_mhtarget = std::stod(argv[i]);
+	    if (_mcmc_mhtarget <= 0 || _mcmc_mhtarget >= 1)
+	      throw std::domain_error("--mhtarget outside bounds");
+	  }
+	  catch (...) {
+	    std::cerr << _MESSAGE_IMPROPER_MHTARGET;
+	    _status = call_status::error;
+	  }
+	}
+	else {
+	  std::cerr << _MESSAGE_IMPROPER_MHTARGET;
 	  _status = call_status::error;
 	}
       }
@@ -340,6 +362,13 @@ dualres::GPMCommandParser<T>::operator bool() const {
 template< typename T >
 bool dualres::GPMCommandParser<T>::operator!() const {
   return error();
+};
+
+
+template< typename T >
+typename dualres::GPMCommandParser<T>::scalar_type
+dualres::GPMCommandParser<T>::mcmc_mhtarget() const {
+  return _mcmc_mhtarget;
 };
 
 

@@ -34,6 +34,7 @@ target_link_libraries(dualgpm Boost::filesystem FFTW::FloatOpenMP
 		OpenMP::OpenMP_CXX libniftiio.a libznz.a ZLIB::ZLIB)
 set_target_properties(dualgpm PROPERTIES RUNTIME_OUTPUT_DIRECTORY
 		"${CMAKE_BINARY_DIR}/bin")
+## target_compile_definitions(dualgpm PUBLIC EIGEN_DONT_PARALLELIZE)
 
 
 

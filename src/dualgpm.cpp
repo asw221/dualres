@@ -56,9 +56,11 @@ int main(int argc, char *argv[]) {
   dualres::set_number_of_threads(inputs.threads());
   omp_set_num_threads(dualres::threads());
   Eigen::setNbThreads(dualres::threads());
+  
   fftwf_plan_with_nthreads(dualres::threads());
   std::cout << "[dualres running on " << dualres::threads()
 	    << " cores]" << std::endl;
+  
 
   scalar_type neighborhood = inputs.neighborhood();
   // int n_datasets = 1;
@@ -170,7 +172,9 @@ int main(int argc, char *argv[]) {
 
     _hmc_ = dualres::HMCParameters<scalar_type>(
       inputs.mcmc_burnin(), inputs.mcmc_nsave(), inputs.mcmc_thin(),
-      inputs.mcmc_leapfrog_steps()
+      inputs.mcmc_leapfrog_steps(),
+      (scalar_type)(1.0 / inputs.mcmc_leapfrog_steps()),  // starting eps
+      inputs.mcmc_mhtarget()
       );
     dualres::set_monitor_simulations(inputs.monitor());
       
@@ -250,7 +254,8 @@ int main(int argc, char *argv[]) {
 			  << ","
 			  << model_output.sampling_time()
 			  << ","
-			  << _hmc_.eps_value();
+			  << _hmc_.eps_value()
+			  << "\n";
       mcmc_samples_stream.close();
     }
     

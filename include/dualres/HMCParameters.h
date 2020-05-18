@@ -1,5 +1,6 @@
 
 #include <algorithm>
+// #include <limits>
 #include <math.h>
 #include <random>
 #include <stdexcept>
@@ -14,6 +15,16 @@
 
 namespace dualres {
 
+
+  /*! Parameters for Hamiltonian Monte Carlo
+   * 
+   * Implements the dual-averaging method of
+   * <a href="http://jmlr.org/papers/volume15/hoffman14a/hoffman14a.pdf">Hoffman and Gelman, 2014</a>
+   * to automatically tune the step size, \c eps(). The value returned 
+   * by \c eps() has an enforced lower bound set to the value of 
+   * \c eps_min().
+   */
+  // -----------------------------------------------------------------
 
   template< typename RealType = float >
   class HMCParameters {
@@ -42,8 +53,9 @@ namespace dualres {
     int n_save() const;
     int thin_iterations() const;
     
-    value_type eps() const;
-    value_type eps_value() const;
+    value_type eps() const;        /*!< Return step size sampled around \c eps_value() */
+    value_type eps_min() const;    /*!< Return enforced minimum value of \c eps() */
+    value_type eps_value() const;  /*!< Return non-random step size value */
     value_type metropolis_hastings_rate() const;
     value_type path_length() const;
 
@@ -63,11 +75,12 @@ namespace dualres {
 
     double _A;
     double _eps;
+    double _eps0;            /*!< Minimum value of HMC step size. Set to 1e-3 */
     double _eps_bar;
     double _eps_target;
     double _gamma;
     double _h_bar;
-    double _mh_running_sum;
+    double _mh_running_sum;  /**/
     double _mh_target;
     double _t0;
     double _kappa;
@@ -123,7 +136,9 @@ dualres::HMCParameters<RealType>::HMCParameters(
   _thin = (thin == 0) ? 1 : thin;
 
   _A = 1;
-  _eps = starting_eps;
+  // _eps0 = (double)std::numeric_limits<value_type>::epsilon();
+  _eps0 = 1e-3;
+  _eps = std::max((double)starting_eps, _eps0);
   _eps_bar = 1;
   _gamma = gamma;
   _h_bar = 0;
@@ -201,7 +216,16 @@ dualres::HMCParameters<RealType>::eps() const {
   if (_warmup)
     return static_cast<value_type>(_eps);
   else
-    return static_cast<value_type>(_eps * Uniform(dualres::__internals::_RNG_));
+    return static_cast<value_type>(
+      std::max(_eps * Uniform(dualres::__internals::_RNG_), _eps0));
+};
+
+
+
+template< typename RealType > 
+typename dualres::HMCParameters<RealType>::value_type
+dualres::HMCParameters<RealType>::eps_min() const {
+  return static_cast<value_type>(_eps0);
 };
 
 
@@ -213,11 +237,13 @@ dualres::HMCParameters<RealType>::eps_value() const {
 };
 
 
+
     
 template< typename RealType > 
 typename dualres::HMCParameters<RealType>::value_type
 dualres::HMCParameters<RealType>::metropolis_hastings_rate() const {
-  return static_cast<value_type>(_mh_running_sum / std::max(int(_iteration - _burnin), 1));
+  return static_cast<value_type>(_mh_running_sum /
+				 std::max(int(_iteration - _burnin), 1));
 };
 
 
@@ -237,7 +263,7 @@ void dualres::HMCParameters<RealType>::update(
   if (_iteration == _burnin) {
     _warmup = false;
     _eps_start_found = true;
-    if (_eps_bar > 0)
+    if (_eps_bar > _eps0)
       _eps = _eps_bar;
   }
   if (_warmup) {
@@ -257,6 +283,7 @@ void dualres::HMCParameters<RealType>::update(
 	(_mh_target - mh_rate) / (_iteration + _t0);
       _eps = std::exp(_eps_target - std::sqrt(static_cast<value_type>(_iteration)) *
 		      _h_bar / _gamma);
+      _eps = std::max(_eps, _eps0);
       _eps_bar = std::exp(std::pow(static_cast<value_type>(_iteration), -_kappa) *
 			  std::log(_eps) +
 			  (1 - std::pow(static_cast<value_type>(_iteration), -_kappa)) *

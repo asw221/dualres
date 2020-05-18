@@ -5,7 +5,8 @@ cmake_minimum_required(VERSION 3.12)
 
 set(CMAKE_CXX_FLAGS "-Wall")
 set(CMAKE_CXX_FLAGS_DEBUG "-g -O0")
-set(CMAKE_CXX_FLAGS_RELEASE "-O2")
+set(CMAKE_CXX_FLAGS_RELEASE "-O2 -Wall -DNDEBUG")
+set(CMAKE_VERBOSE_MAKEFILE ON)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -37,4 +38,18 @@ if (APPLE)
 endif()
 
 
+
+if (CMAKE_CXX_COMPILER_ID MATCHES "GNU\$")
+    # require at least gcc 8.0
+    if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 8.0)
+        message(FATAL_ERROR "GCC version must be >= 8.0")
+    endif()
+elseif (CMAKE_CXX_COMPILER_ID MATCHES "Clang\$")
+    # require at least clang 6.0
+    if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 6.0)
+        message(FATAL_ERROR "Clang version must be >= 6.0")
+    endif()
+else()
+    message(WARNING "You are using an unsupported compiler! Compilation has only been tested with clang and gcc")
+endif()
 
