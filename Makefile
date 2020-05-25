@@ -1,6 +1,6 @@
 
 CXX := clang++
-CXXFLAGS := -g -Wall -std=c++17 -O2
+CXXFLAGS := -g -Wall -std=c++17 -O2 -DNDEBUG
 
 SRCDIR := src
 BUILDDIR := build
@@ -19,7 +19,7 @@ all: dualgpm clear_fftw_history estimate_rbf estimate_snr gaussian_smooth image_
 
 
 dualgpm: $(SRCDIR)/dualgpm.cpp
-	$(CXX) $< $(CXXFLAGS) $(INC) $(LIB) -o $(EXECDIR)/dualgpm
+	$(CXX) $< $(CXXFLAGS) $(INC) $(LIB) -DEIGEN_DONT_PARALLELIZE -DEIGEN_DONT_VECTORIZE -o $(EXECDIR)/dualgpm
 
 clear_fftw_history: $(SRCDIR)/clear_fftw_history.cpp
 	$(CXX) $< $(CXXFLAGS) $(INC) $(LIB) -o $(EXECDIR)/clear_fftw_history

@@ -412,9 +412,14 @@ dualres::MultiResParameters<T>::_log_prior(
   //     __temp_product, _lambda);
 
   // #pragma omp parallel for reduction(+ : __lp)
-  for (int i = 0; i < __temp_product.size(); i++) {
-    __lp += std::conj(__temp_product.coeffRef(i)) *
-      __temp_product.coeffRef(i) / _lambda.coeffRef(i);
+  // for (int i = 0; i < __temp_product.size(); i++) {
+  //   __lp += std::conj(__temp_product.coeffRef(i)) *
+  //     __temp_product.coeffRef(i) / _lambda.coeffRef(i);
+  // }
+  for (int i = 0; i < __lambda_grid_indices.size(); i++) {
+    __lp += std::conj(__temp_product.coeffRef(__lambda_grid_indices[i])) *
+      __temp_product.coeffRef(__lambda_grid_indices[i]) /
+      _lambda.coeffRef(__lambda_grid_indices[i]);
   }
   return -0.5 * (__lp.real() + __lp.imag()) / _lambda.size();
 };
@@ -513,9 +518,14 @@ dualres::MultiResParameters<T>::_potential_energy() {
   // using serial for loops. OpenMP/Eigen expressions don't seem to work
   // 
   // #pragma omp parallel for reduction(+ : __pe)  // <- this one doesn't work
-  for (int i = 0; i < __temp_product.size(); i++) {
-    __pe += std::conj(__temp_product.coeffRef(i)) *
-      _lambda_mass.coeffRef(i) * __temp_product.coeffRef(i);
+  // for (int i = 0; i < __temp_product.size(); i++) {
+  //   __pe += std::conj(__temp_product.coeffRef(i)) *
+  //     _lambda_mass.coeffRef(i) * __temp_product.coeffRef(i);
+  // }
+  for (int i = 0; i < __lambda_grid_indices.size(); i++) {
+    __pe += std::conj(__temp_product.coeffRef(__lambda_grid_indices[i])) *
+      _lambda_mass.coeffRef(__lambda_grid_indices[i]) *
+      __temp_product.coeffRef(__lambda_grid_indices[i]);
   }
   // __pe = (__temp_product.matrix().adjoint() *
   // 	  (_lambda_mass * __temp_product).matrix())[0];
@@ -612,7 +622,7 @@ dualres::MultiResParameters<T>::update(
   // _set_real_mu(_mu);
   // ^^ _real_mu must be set before _update_sigma_sq_inv(), _update_tau_sq_inv()
   _update_sigma_sq_inv(data);
-  _update_tau_sq_inv();
+  // _update_tau_sq_inv();
   return std::min((scalar_type)1.0, R);
 };
 

@@ -54,10 +54,10 @@ namespace dualres {
     int thin_iterations() const;
     
     value_type eps() const;        /*!< Return step size sampled around \c eps_value() */
-    value_type eps_min() const;    /*!< Return enforced minimum value of \c eps() */
+    value_type eps_min() const;    /*!< Return enforced minimum value of \c eps(). Set to \c 1e-3 */
     value_type eps_value() const;  /*!< Return non-random step size value */
     value_type metropolis_hastings_rate() const;
-    value_type path_length() const;
+    value_type path_length() const;  /*!< Returns \c eps_value() * \c integrator_steps() */
 
     void update(const value_type &mh_rate);
     void reset();

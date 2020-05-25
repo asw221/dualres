@@ -51,7 +51,7 @@ namespace dualres {
 	void update(
           const VectorType &mu,
 	  const std::vector<scalar_type> &sigma,
-	  const scalar_type &log_posterior
+	  const scalar_type &log_likelihood
         );
 
 
@@ -69,7 +69,7 @@ namespace dualres {
 
       private:
 	int _samples;
-	scalar_type _log_posterior;
+	scalar_type _log_likelihood;
 	scalar_type _metropolis_hastings_rate;
 	scalar_type _sampling_time;
 	VectorType _first_moment_mu;
@@ -97,7 +97,7 @@ namespace dualres {
 	  dualres::use_lambda_method::EXTENDED
         );
 
-	T mh_rate, log_posterior;
+	T mh_rate, log_lik;
 	int save_count = 0;
 	dualres::gaussian_process::sor_approx::mcmc_summary<T> posterior_summary(
           _theta_.mu().size(), _data_.n_datasets());
@@ -127,13 +127,13 @@ namespace dualres {
 	      sigma[i] = _theta_.sigma(i);
 	      _output_stream_ << sigma[i] << "\t";
 	    }
-	    log_posterior = _theta_.log_posterior(_data_);
+	    log_lik = _theta_.log_likelihood(_data_);
 	    _output_stream_ << _theta_.tau() << "\t";
-	    _output_stream_ << log_posterior;
+	    _output_stream_ << log_lik;
 	    if (save_count < (_hmc_.n_save() - 1))
 	      _output_stream_ << std::endl;
 
-	    posterior_summary.update(mu, sigma, log_posterior);
+	    posterior_summary.update(mu, sigma, log_lik);
 	    save_count++;
 	  }
 	  if (!dualres::monitor_simulations()) {
@@ -166,7 +166,7 @@ dualres::gaussian_process::sor_approx::mcmc_summary<T>::mcmc_summary(
   const int size_sigma
 ) {
   _samples = 0;
-  _log_posterior = 0;
+  _log_likelihood = 0;
   _metropolis_hastings_rate = 0;
   _sampling_time = 0;
   _first_moment_mu = VectorType::Zero(size_mu);
@@ -182,7 +182,7 @@ void dualres::gaussian_process::sor_approx::mcmc_summary<T>::update(
   const dualres::gaussian_process::sor_approx::mcmc_summary<T>::VectorType& mu,
   const std::vector<
     typename dualres::gaussian_process::sor_approx::mcmc_summary<T>::scalar_type>& sigma,
-  const dualres::gaussian_process::sor_approx::mcmc_summary<T>::scalar_type& log_posterior
+  const dualres::gaussian_process::sor_approx::mcmc_summary<T>::scalar_type& log_likelihood
 ) {
   if (_first_moment_mu.size() != mu.size())
     throw std::domain_error("mu dimension mismatch");
@@ -193,7 +193,7 @@ void dualres::gaussian_process::sor_approx::mcmc_summary<T>::update(
   for (int i = 0; i < (int)_sigma.size(); i++) {
     _sigma[i] += sigma[i];
   }
-  _log_posterior += log_posterior;
+  _log_likelihood += log_likelihood;
   _samples++;
 };
 
