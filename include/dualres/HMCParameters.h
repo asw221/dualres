@@ -137,7 +137,7 @@ dualres::HMCParameters<RealType>::HMCParameters(
 
   _A = 1;
   // _eps0 = (double)std::numeric_limits<value_type>::epsilon();
-  _eps0 = 1e-3;
+  _eps0 = 1e-5;
   _eps = std::max((double)starting_eps, _eps0);
   _eps_bar = 1;
   _gamma = gamma;

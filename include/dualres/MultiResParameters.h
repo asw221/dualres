@@ -691,16 +691,13 @@ void dualres::MultiResParameters<T>::_initialize_sigma(
 
 template< typename T >
 void dualres::MultiResParameters<T>::_sample_momentum() {
-  // const complex_type _czero(0, 0);
   _initial_energy = 0;
   for (int i = 0; i < _momentum.size(); i++) {
     _momentum.coeffRef(i) = complex_type(__Standard_Gaussian(dualres::rng()),
 					 __Standard_Gaussian(dualres::rng()));
-    // if (_lambda_mass.coeffRef(i) != _czero) {
-      _initial_energy += ( std::conj(_momentum.coeffRef(i)) *
-			   _momentum.coeffRef(i) ).real();
-      // imaginary part will always be 0
-    // }
+    _initial_energy += ( std::conj(_momentum.coeffRef(i)) *
+			 _momentum.coeffRef(i) ).real();
+    // imaginary part will always be 0
   }
   // for (int i = 0; i < __lambda_grid_indices.size(); i++) {
   //   _initial_energy += ( std::conj(_momentum.coeffRef(__lambda_grid_indices[i])) *
