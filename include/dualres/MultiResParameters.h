@@ -319,13 +319,13 @@ dualres::MultiResParameters<T>::_compute_gradient(
   //   throw std::logic_error("Insufficient data for parameters");
 #endif
   // __temp_product.setZero();  
-  fftwf_execute_dft(__backward_fft_plan,
+  fftwf_execute_dft(__forward_fft_plan,
     reinterpret_cast<fftwf_complex*>(mu_star.data()),
     reinterpret_cast<fftwf_complex*>(__temp_product.data())
   );
   __temp_product /= -(scalar_type)_lambda.size() * _lambda;
   _low_rank_adjust(__temp_product);
-  fftwf_execute_dft(__forward_fft_plan,
+  fftwf_execute_dft(__backward_fft_plan,
     reinterpret_cast<fftwf_complex*>(__temp_product.data()),
     reinterpret_cast<fftwf_complex*>(__temp_product.data())
   );
@@ -401,7 +401,7 @@ dualres::MultiResParameters<T>::_log_prior(
   // 				  * _positive_eigen_values * __Fh_x));
   complex_type __lp(0, 0);
   // __temp_product.setZero();
-  fftwf_execute_dft(__backward_fft_plan,
+  fftwf_execute_dft(__forward_fft_plan,
     reinterpret_cast<fftwf_complex*>(mu_star.data()),
     reinterpret_cast<fftwf_complex*>(__temp_product.data())
   );
@@ -412,15 +412,17 @@ dualres::MultiResParameters<T>::_log_prior(
   //     __temp_product, _lambda);
 
   // #pragma omp parallel for reduction(+ : __lp)
-  // for (int i = 0; i < __temp_product.size(); i++) {
-  //   __lp += std::conj(__temp_product.coeffRef(i)) *
-  //     __temp_product.coeffRef(i) / _lambda.coeffRef(i);
-  // }
-  for (int i = 0; i < __lambda_grid_indices.size(); i++) {
-    __lp += std::conj(__temp_product.coeffRef(__lambda_grid_indices[i])) *
-      __temp_product.coeffRef(__lambda_grid_indices[i]) /
-      _lambda.coeffRef(__lambda_grid_indices[i]);
+  for (int i = 0; i < __temp_product.size(); i++) {
+    if (_lambda.coeffRef(i).real() > 0) {
+      __lp += std::conj(__temp_product.coeffRef(i)) *
+	__temp_product.coeffRef(i) / _lambda.coeffRef(i);
+    }
   }
+  // for (int i = 0; i < __lambda_grid_indices.size(); i++) {
+  //   __lp += std::conj(__temp_product.coeffRef(__lambda_grid_indices[i])) *
+  //     __temp_product.coeffRef(__lambda_grid_indices[i]) /
+  //     _lambda.coeffRef(__lambda_grid_indices[i]);
+  // }
   return -0.5 * (__lp.real() + __lp.imag()) / _lambda.size();
 };
 
@@ -502,9 +504,10 @@ typename dualres::MultiResParameters<T>::scalar_type
 dualres::MultiResParameters<T>::_potential_energy() {
   // __Fh_x = af::idft(_momentum) / std::sqrt((scalar_type)_momentum.elements());
   // return -0.5 * af::sum<scalar_type>(af::real(af::conjg(__Fh_x) * _lambda_mass * __Fh_x));
+  const complex_type _czero(0, 0);
   complex_type __pe(0, 0);
   // __temp_product.setZero();
-  fftwf_execute_dft(__backward_fft_plan,
+  fftwf_execute_dft(__forward_fft_plan,
     reinterpret_cast<fftwf_complex*>(_momentum.data()),
     reinterpret_cast<fftwf_complex*>(__temp_product.data())
   );
@@ -512,23 +515,19 @@ dualres::MultiResParameters<T>::_potential_energy() {
 
   // complex_type __pe = dualres::compute_quadratic_with_complex_diagonal(
   //   __temp_product, _lambda_mass);
-
-
   // Shockingly, the only way I can get the quadratic products to work is by
   // using serial for loops. OpenMP/Eigen expressions don't seem to work
   // 
-  // #pragma omp parallel for reduction(+ : __pe)  // <- this one doesn't work
-  // for (int i = 0; i < __temp_product.size(); i++) {
-  //   __pe += std::conj(__temp_product.coeffRef(i)) *
-  //     _lambda_mass.coeffRef(i) * __temp_product.coeffRef(i);
-  // }
-  for (int i = 0; i < __lambda_grid_indices.size(); i++) {
-    __pe += std::conj(__temp_product.coeffRef(__lambda_grid_indices[i])) *
-      _lambda_mass.coeffRef(__lambda_grid_indices[i]) *
-      __temp_product.coeffRef(__lambda_grid_indices[i]);
-  }
   // __pe = (__temp_product.matrix().adjoint() *
   // 	  (_lambda_mass * __temp_product).matrix())[0];
+  
+  for (int i = 0; i < __temp_product.size(); i++) {
+    if (_lambda_mass.coeffRef(i) != _czero) {
+      __pe += std::conj(__temp_product.coeffRef(i)) *
+	__temp_product.coeffRef(i) /
+	_lambda_mass.coeffRef(i);
+    }
+  }
   return -0.5 * (__pe.real() + __pe.imag()) / _lambda_mass.size();
 };
 
@@ -580,22 +579,22 @@ dualres::MultiResParameters<T>::update(
   lp_initial = _log_posterior(data, _mu);
   // _initial_energy += _log_posterior(data, _mu);  // _sample_momentum() initilizes energy
   _initial_energy += lp_initial;
-  _momentum += k * eps * _compute_gradient(data, _mu_star);
+  _momentum += k * eps * _compute_gradient(data, _mu);
   for (int step = 0; step < L; step++) {
     k = (step == (L - 1)) ? 0.5 : 1;
     // __temp_product.setZero();
-    fftwf_execute_dft(__backward_fft_plan,
+    fftwf_execute_dft(__forward_fft_plan,
       reinterpret_cast<fftwf_complex*>(_momentum.data()),
       reinterpret_cast<fftwf_complex*>(__temp_product.data())
     );
-    __temp_product *= (eps / _lambda_mass.size()) * _lambda_mass;
+    // __temp_product *= (eps / _lambda_mass.size()) * _lambda_mass;
+    __temp_product /= _lambda_mass * ((scalar_type)_lambda_mass.size() / eps);
+    _low_rank_adjust(__temp_product);
     // _lambda_mass is already low-rank adjusted
-    fftwf_execute_dft(__forward_fft_plan,
+    fftwf_execute_dft(__backward_fft_plan,
       reinterpret_cast<fftwf_complex*>(__temp_product.data()),
       reinterpret_cast<fftwf_complex*>(__temp_product.data())
     );
-    // _mu_star += eps * af::dft(_lambda_mass * af::idft(_momentum) /
-    // 			       _momentum.elements());
     _mu_star += __temp_product;
     _momentum += k * eps * _compute_gradient(data, _mu_star);
   }
@@ -635,7 +634,8 @@ template< typename T >
 void dualres::MultiResParameters<T>::_compute_mass_matrix_eigen_values() {
   // _lambda_mass = (-1 / (_lambda * _sigma_sq_inv[0] + 1) + 1) /
   //   _sigma_sq_inv[0];
-  _lambda_mass = _lambda / (_lambda * _sigma_sq_inv[0] + 1);
+  // _lambda_mass = (_lambda * _sigma_sq_inv[0] + 1) / _lambda;
+  _lambda_mass = 1 / _lambda + _sigma_sq_inv[0];
   _low_rank_adjust(_lambda_mass);
 };
 
@@ -691,22 +691,29 @@ void dualres::MultiResParameters<T>::_initialize_sigma(
 
 template< typename T >
 void dualres::MultiResParameters<T>::_sample_momentum() {
+  // const complex_type _czero(0, 0);
   _initial_energy = 0;
   for (int i = 0; i < _momentum.size(); i++) {
     _momentum.coeffRef(i) = complex_type(__Standard_Gaussian(dualres::rng()),
 					 __Standard_Gaussian(dualres::rng()));
-    _initial_energy += ( std::conj(_momentum.coeffRef(i)) *
-			 _momentum.coeffRef(i) ).real();
-    // imaginary part will always be 0
+    // if (_lambda_mass.coeffRef(i) != _czero) {
+      _initial_energy += ( std::conj(_momentum.coeffRef(i)) *
+			   _momentum.coeffRef(i) ).real();
+      // imaginary part will always be 0
+    // }
   }
+  // for (int i = 0; i < __lambda_grid_indices.size(); i++) {
+  //   _initial_energy += ( std::conj(_momentum.coeffRef(__lambda_grid_indices[i])) *
+  // 			 _momentum.coeffRef(__lambda_grid_indices[i]) ).real();
+  // }
   _initial_energy *= -0.5;
-  fftwf_execute_dft(__backward_fft_plan,
+  fftwf_execute_dft(__forward_fft_plan,
     reinterpret_cast<fftwf_complex*>(_momentum.data()),
     reinterpret_cast<fftwf_complex*>(_momentum.data())
   );
-  _momentum /= _lambda_mass.sqrt() * (scalar_type)_momentum.size();
+  _momentum *= _lambda_mass.sqrt() / (scalar_type)_momentum.size();
   _low_rank_adjust(_momentum);
-  fftwf_execute_dft(__forward_fft_plan,
+  fftwf_execute_dft(__backward_fft_plan,
     reinterpret_cast<fftwf_complex*>(_momentum.data()),
     reinterpret_cast<fftwf_complex*>(_momentum.data())
   );
