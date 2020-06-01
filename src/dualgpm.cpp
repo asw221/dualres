@@ -41,7 +41,11 @@ bool valid_covar_parameters(const std::vector<T> &theta);
 
 
 int main(int argc, char *argv[]) {
+#ifdef DUALRES_SINGLE_PRECISION
   typedef float scalar_type;
+#else
+  typedef double scalar_type;
+#endif
   
   dualres::GPMCommandParser<scalar_type> inputs(argc, argv);
   // Errors if not given at least a "highres" image
@@ -54,25 +58,36 @@ int main(int argc, char *argv[]) {
   dualres::set_seed(inputs.seed());
 
   dualres::set_number_of_threads(inputs.threads());
-  omp_set_num_threads(dualres::threads());
+  ::omp_set_num_threads(dualres::threads());
   Eigen::setNbThreads(dualres::threads());
-  
-  fftwf_plan_with_nthreads(dualres::threads());
+
+
+#ifdef DUALRES_SINGLE_PRECISION
+  const int FFTW_STATUS = ::fftwf_init_threads();
+#else
+  const int FFTW_STATUS = ::fftw_init_threads();
+#endif
+  if (FFTW_STATUS == 0) {
+    std::cerr
+      << "FFTW thread initialization had abnormal exit status"
+      << std::endl;
+    return 1;
+  }
   std::cout << "[dualres running on " << dualres::threads()
 	    << " cores]" << std::endl;
   
 
   scalar_type neighborhood = inputs.neighborhood();
   // int n_datasets = 1;
-  const bool _standard_resolution_available =
+  const bool _STANDARD_RESOLUTION_AVAILABLE =
     !inputs.stdres_file().empty();
-  // const int _n_datasets = _standard_resolution_available ? 2 : 1;
+  // const int _n_datasets = _STANDARD_RESOLUTION_AVAILABLE ? 2 : 1;
 
-  const std::string _output_file_samples = inputs.output_file(
+  const std::string _OUTPUT_FILE_SAMPLES = inputs.output_file(
     "_samples.dat");
-  const std::string _output_file_mean = inputs.output_file(
+  const std::string _OUTPUT_FILE_MEAN = inputs.output_file(
     "_posterior_mean.nii");
-  const std::string _output_file_variance = inputs.output_file(
+  const std::string _OUTPUT_FILE_VARIANCE = inputs.output_file(
     "_posterior_variance.nii");
   
   nifti_image* _high_res_;
@@ -87,11 +102,11 @@ int main(int argc, char *argv[]) {
   std::ostringstream error_stream;
 
   
-  std::ofstream mcmc_samples_stream(_output_file_samples.c_str());
-  if (_output_file_mean != inputs.highres_file())
-    remove(_output_file_mean.c_str());
-  if (_output_file_variance != inputs.highres_file())
-    remove(_output_file_variance.c_str());
+  std::ofstream mcmc_samples_stream(_OUTPUT_FILE_SAMPLES.c_str());
+  if (_OUTPUT_FILE_MEAN != inputs.highres_file())
+    ::remove(_OUTPUT_FILE_MEAN.c_str());
+  if (_OUTPUT_FILE_VARIANCE != inputs.highres_file())
+    ::remove(_OUTPUT_FILE_VARIANCE.c_str());
   
 
   try {
@@ -103,12 +118,12 @@ int main(int argc, char *argv[]) {
     if (!mcmc_samples_stream) {
       error_status = true;
       error_stream << "Error: will not be able to write output to\n  "
-		   << _output_file_mean;
+		   << _OUTPUT_FILE_MEAN;
       throw std::runtime_error(error_stream.str());
     }
     
     
-    if (_standard_resolution_available) {
+    if (_STANDARD_RESOLUTION_AVAILABLE) {
       _std_res_ = nifti_image_read(inputs.stdres_file().c_str(), 1);
       std::cout << "Standard-resolution file: " << inputs.stdres_file()
 		<< std::endl;
@@ -144,7 +159,7 @@ int main(int argc, char *argv[]) {
       }
       std::cout << "Neighborhood: " << neighborhood << " (mm)\n";
       
-    }  // if (_standard_resolution_available)
+    }  // if (_STANDARD_RESOLUTION_AVAILABLE)
 
     
     if (!compute_covar_parameters_if_needed(_covar_params, _high_res_)) {
@@ -188,7 +203,7 @@ int main(int argc, char *argv[]) {
 	      << std::endl;
 
 
-    if (!_standard_resolution_available) {
+    if (!_STANDARD_RESOLUTION_AVAILABLE) {
       _data_ = dualres::MultiResData<scalar_type>(
         _high_res_, _covar_params);
     }
@@ -197,7 +212,7 @@ int main(int argc, char *argv[]) {
         _high_res_, _std_res_, _covar_params, neighborhood);
 
       // Clear Standard Resolution data file after importing to _data_
-      nifti_image_free(_std_res_);
+      ::nifti_image_free(_std_res_);
     }
     // _data_.print_summary();
 
@@ -209,16 +224,16 @@ int main(int argc, char *argv[]) {
       <scalar_type>(_high_res_, _data_, _hmc_, mcmc_samples_stream);
 
     mcmc_samples_stream.close();
-    std::cout << _output_file_samples << " written\n";
+    std::cout << _OUTPUT_FILE_SAMPLES << " written\n";
 
     // Write output
     // Posterior mean:
-    nifti_set_filenames(_high_res_, _output_file_mean.c_str(), 1, 1);
+    ::nifti_set_filenames(_high_res_, _OUTPUT_FILE_MEAN.c_str(), 1, 1);
     if (std::string(_high_res_->fname) != inputs.highres_file()) {
       dualres::emplace_nonzero_data(_high_res_, model_output.mode_mu());
       
-      nifti_image_write(_high_res_);
-      std::cout << _output_file_mean << " written\n";
+      ::nifti_image_write(_high_res_);
+      std::cout << _OUTPUT_FILE_MEAN << " written\n";
     }
     else {
       error_stream << "Warning: posterior mean image would overwrite data. "
@@ -227,12 +242,12 @@ int main(int argc, char *argv[]) {
     }
     
     // Posterior variance:
-    nifti_set_filenames(_high_res_, _output_file_variance.c_str(), 1, 1);
+    ::nifti_set_filenames(_high_res_, _OUTPUT_FILE_VARIANCE.c_str(), 1, 1);
     if (std::string(_high_res_->fname) != inputs.highres_file()) {
       dualres::emplace_nonzero_data(_high_res_, model_output.var_mu());
       
-      nifti_image_write(_high_res_);
-      std::cout << _output_file_variance << " written\n";
+      ::nifti_image_write(_high_res_);
+      std::cout << _OUTPUT_FILE_VARIANCE << " written\n";
     }
     else {
       error_stream << "Warning: posterior variance image would overwrite data. "
@@ -261,7 +276,7 @@ int main(int argc, char *argv[]) {
     
 
     // 
-    nifti_image_free(_high_res_);
+    ::nifti_image_free(_high_res_);
   }  // try ...
   catch (const std::exception &__err) {
     error_status = true;
@@ -277,7 +292,11 @@ int main(int argc, char *argv[]) {
 
 
   // Finish by calling  fftw_cleanup_threads()
-  fftwf_cleanup_threads();
+#ifdef DUALRES_SINGLE_PRECISION
+  ::fftwf_cleanup_threads();
+#else
+  ::fftw_cleanup_threads();
+#endif
   if (error_status)
     return 1;
 }

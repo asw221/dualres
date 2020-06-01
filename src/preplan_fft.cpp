@@ -14,6 +14,7 @@
 #include "dualres/CommandParser.h"
 #include "dualres/defines.h"
 #include "dualres/nifti_manipulation.h"
+#include "dualres/sized_fft.h"
 #include "dualres/utilities.h"
 
 
@@ -160,6 +161,35 @@ int main (int argc, char* argv[]) {
   duration = std::chrono::duration_cast<std::chrono::microseconds>(stop_time - start_time);
   std::cout << "Each inverse DFT will take approximately " << std::setprecision(5) << std::fixed
 	    << ((double)duration.count() / 1e6) << " sec\n" << std::endl;
+
+
+  // dualres::sized_fft<scalar_type> FFT;
+  // // Accuracy check:
+  // std::cout << "Checking new method accuracy:" << std::endl;
+  // scalar_type __mse(0);
+  // dualres::sized_fft<scalar_type> FFT(grid_dims[0], grid_dims[1], grid_dims[2]);
+  // _lambda = ComplexArrayType::Random(grid_dims.prod());
+  // ComplexArrayType _lambda_copy = _lambda;
+  // fftwf_execute(__forward_fft_plan);
+
+  // FFT.forward(_lambda_copy.data());
+  // for (int i = 0; i < _lambda.size(); i++) {
+  //   __mse += ( std::conj(_lambda[i] - _lambda_copy[i]) *
+  // 	       (_lambda[i] - _lambda_copy[i]) ).real();
+  // }
+  // __mse /= _lambda.size();
+  // std::cout << "Forward DFT MSE = " << __mse << std::endl;
+
+  // fftwf_execute(__backward_fft_plan);
+  // FFT.inverse(_lambda_copy.data());
+  // __mse = 0;
+  // for (int i = 0; i < _lambda.size(); i++) {
+  //   __mse += ( std::conj(_lambda[i] - _lambda_copy[i]) *
+  // 	       (_lambda[i] - _lambda_copy[i]) ).real();
+  // }
+  // __mse /= _lambda.size();
+  // std::cout << "Backward DFT MSE = " << __mse << std::endl;
+  
   
 
   // Cleanup

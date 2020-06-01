@@ -10,11 +10,19 @@ EXECDIR := bin
 EIGEN3_DIR := /usr/local/include/eigen3
 
 INC := -Iinclude -Ilib/nifti/include -I$(EIGEN3_DIR) -I/usr/local/include
-LIB := -Llib/nifti/lib -L/usr/local/lib -lniftiio -lznz -lz -lnlopt -lboost_filesystem -lfftw3f -lfftw3f_omp -Xpreprocessor -fopenmp -lomp -lm
+LIB := -Llib/nifti/lib -L/usr/local/lib -lniftiio -lznz -lz -lnlopt -lboost_filesystem -lfftw3 -lfftw3_omp -lfftw3f -lfftw3f_omp  -Xpreprocessor -fopenmp -lomp -lm
 
 
 
-all: dualgpm clear_fftw_history estimate_rbf estimate_snr gaussian_smooth image_info preplan_fft rbf_neighborhood simulate_data_from_image
+all: niftilib dualgpm clear_fftw_history estimate_rbf estimate_snr gaussian_smooth image_info preplan_fft rbf_neighborhood simulate_data_from_image
+
+
+niftilib:
+	cd lib/nifti
+	make clean
+	make all
+	echo "NIfTI lib build"
+	cd ../../
 
 
 

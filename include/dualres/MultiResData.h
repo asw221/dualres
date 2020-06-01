@@ -80,7 +80,8 @@ dualres::MultiResData<T>::MultiResData() {
 template< typename T >
 dualres::MultiResData<T>::MultiResData(
   const nifti_image* const h_res,
-  const std::vector<typename dualres::MultiResData<T>::scalar_type> &covariance_parameters
+  const std::vector<typename dualres::MultiResData<T>::scalar_type>
+    &covariance_parameters
 ) {
   std::vector<scalar_type> v_Yh = dualres::get_nonzero_data<scalar_type>(h_res);
   _n_datasets = 1;
@@ -96,15 +97,17 @@ template< typename T >
 dualres::MultiResData<T>::MultiResData(
   const nifti_image* const h_res,
   const nifti_image* const s_res,
-  const std::vector<typename dualres::MultiResData<T>::scalar_type> &covariance_parameters,
-  const typename dualres::MultiResData<T>::scalar_type &neighborhood_radius
+  const std::vector<typename dualres::MultiResData<T>::scalar_type>
+    &covariance_parameters,
+  const typename dualres::MultiResData<T>::scalar_type
+    &neighborhood_radius
 ) {
   dualres::kriging_matrix_data<scalar_type> kmd;
   if (dualres::is_float(h_res))
-    kmd = dualres::get_sparse_kriging_matrix_data<float>(
+    kmd = dualres::get_sparse_kriging_matrix_data<scalar_type, float>(
       h_res, s_res, covariance_parameters, neighborhood_radius);
   else if (dualres::is_double(h_res))
-    kmd = dualres::get_sparse_kriging_matrix_data<double>(
+    kmd = dualres::get_sparse_kriging_matrix_data<scalar_type, double>(
       h_res, s_res, covariance_parameters, neighborhood_radius);
   else
     throw std::runtime_error("MultiResData: image is of unrecognized datatype");

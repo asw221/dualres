@@ -3,7 +3,7 @@
 #include <complex>
 #include <cmath>
 #include <Eigen/Core>
-#include <fftw3.h>
+// #include <fftw3.h>
 #include <iomanip>
 #include <iostream>
 #include <limits>
@@ -17,6 +17,7 @@
 #include "dualres/defines.h"
 #include "dualres/eigen_slicing.h"
 #include "dualres/MultiResData.h"
+#include "dualres/sized_fft.h"
 #include "dualres/utilities.h"
 
 
@@ -34,11 +35,12 @@ namespace dualres {
   public:
     typedef T scalar_type;
     typedef typename std::complex<T> complex_type;
-    typedef typename Eigen::Array<complex_type, Eigen::Dynamic, 1> ComplexArrayType;
-    typedef typename Eigen::Matrix<complex_type, Eigen::Dynamic, 1> ComplexVectorType;
-    typedef typename Eigen::Matrix<scalar_type, Eigen::Dynamic, 1> VectorType;
-    // typedef typename Eigen::SparseMatrix<scalar_type, Eigen::RowMajor> SparseMatrixType;
-    // typedef typename Eigen::Array<scalar_type, Eigen::Dynamic, 1> ArrayType;
+    typedef typename Eigen::Array<complex_type, Eigen::Dynamic, 1>
+      ComplexArrayType;
+    typedef typename Eigen::Matrix<complex_type, Eigen::Dynamic, 1>
+      ComplexVectorType;
+    typedef typename Eigen::Matrix<scalar_type, Eigen::Dynamic, 1>
+      VectorType;
 
 
     MultiResParameters(
@@ -46,7 +48,8 @@ namespace dualres {
       const typename std::vector<scalar_type> &covariance_parameters,
       const Eigen::MatrixXi &ijk_yh,
       const dualres::qform_type &Qform_yh,
-      const dualres::use_lambda_method select = dualres::use_lambda_method::EXTENDED
+      const dualres::use_lambda_method select =
+        dualres::use_lambda_method::EXTENDED
     );
 
     ~MultiResParameters();
@@ -65,10 +68,13 @@ namespace dualres {
     const ComplexArrayType& lambda() const;
     const Eigen::VectorXi& data_indices() const;
     
-    scalar_type log_prior() const;  // returns array of dim = 1
-    scalar_type log_likelihood(const typename dualres::MultiResData<scalar_type> &data);
-    // ^^ returns array of dim = 1
-    scalar_type log_posterior(const typename dualres::MultiResData<scalar_type> &data);
+    scalar_type log_prior() const;
+    scalar_type log_likelihood(
+      const typename dualres::MultiResData<scalar_type> &data
+    );
+    scalar_type log_posterior(
+      const typename dualres::MultiResData<scalar_type> &data
+    );
     scalar_type sigma(const int which) const;
     scalar_type tau() const;
 
@@ -77,9 +83,9 @@ namespace dualres {
   private:
     int _n_datasets;
     
-    fftwf_plan __forward_fft_plan;
-    fftwf_plan __backward_fft_plan;
-    
+    // fftwf_plan __forward_fft_plan;
+    // fftwf_plan __backward_fft_plan;
+    dualres::sized_fft<scalar_type> __dft;
 
     ComplexArrayType _lambda;
     ComplexArrayType _lambda_mass;
@@ -149,8 +155,8 @@ namespace dualres {
 
 template< typename T >
 dualres::MultiResParameters<T>::~MultiResParameters() {
-  fftwf_destroy_plan(__forward_fft_plan);
-  fftwf_destroy_plan(__backward_fft_plan);
+  // fftwf_destroy_plan(__forward_fft_plan);
+  // fftwf_destroy_plan(__backward_fft_plan);
 };
 
 
@@ -179,7 +185,8 @@ dualres::MultiResParameters<T>::MultiResParameters(
   __image_grid_dims += Eigen::Vector3i::Ones();
   
   if (lambda_method != dualres::use_lambda_method::EXTENDED) {
-    throw std::domain_error("Only extended-grid eigen vector computation implemented");
+    throw std::domain_error(
+      "Only extended-grid eigen vector computation implemented");
     // want to bother profiling?
     compute_lambda_on_extended_grid = false;  // Possibly?
   }
@@ -195,8 +202,17 @@ dualres::MultiResParameters<T>::MultiResParameters(
     
   // Comptue fftw plans before filling _lambda:
   //  - _lambda will be computed in column-major order: reverse order of dims in plan
-  // _lambda = ComplexArrayType::Constant(
-  //   __lambda_grid_dims.prod(), complex_type(0.0, 0.0));
+  
+  std::cout << "Selecting DFT algorithms... " << std::flush;
+  __dft = dualres::sized_fft<scalar_type>(
+    __lambda_grid_dims[0],
+    __lambda_grid_dims[1],
+    __lambda_grid_dims[2]
+  );
+  std::cout << "Done!" << std::endl;
+  __dft.save_plans();
+  
+  
   _lambda = ComplexArrayType::Zero(__lambda_grid_dims.prod());
   // _grad = ComplexArrayType::Zero(__lambda_grid_dims.prod());
   _lambda_mass = ComplexArrayType::Zero(__lambda_grid_dims.prod());
@@ -206,41 +222,44 @@ dualres::MultiResParameters<T>::MultiResParameters(
   __temp_product = ComplexArrayType::Zero(__lambda_grid_dims.prod());
 
   
-  if (dualres::utilities::file_exists(dualres::fftw_wisdom_file().string()))
-    fftwf_import_wisdom_from_filename(dualres::fftw_wisdom_file().c_str());
+  // if (dualres::utilities::file_exists(dualres::fftw_wisdom_file().string()))
+  //   fftwf_import_wisdom_from_filename(dualres::fftw_wisdom_file().c_str());
   
-  std::cout << "Selecting forward DFT algorithm... " << std::flush;
-  __forward_fft_plan = fftwf_plan_dft_3d(
-    __lambda_grid_dims[2], __lambda_grid_dims[1], __lambda_grid_dims[0],
-    reinterpret_cast<fftwf_complex*>(_lambda.data()),
-    reinterpret_cast<fftwf_complex*>(_lambda.data()),
-    FFTW_FORWARD, FFTW_PATIENT
-  );
-  std::cout << "Done!" << std::endl;
+  // std::cout << "Selecting forward DFT algorithm... " << std::flush;
+  // __forward_fft_plan = fftwf_plan_dft_3d(
+  //   __lambda_grid_dims[2], __lambda_grid_dims[1], __lambda_grid_dims[0],
+  //   reinterpret_cast<fftwf_complex*>(_lambda.data()),
+  //   reinterpret_cast<fftwf_complex*>(_lambda.data()),
+  //   FFTW_FORWARD, FFTW_PATIENT
+  // );
+  // std::cout << "Done!" << std::endl;
     
-  std::cout << "Selecting inverse DFT algorithm... " << std::flush;
-  __backward_fft_plan = fftwf_plan_dft_3d(
-    __lambda_grid_dims[2], __lambda_grid_dims[1], __lambda_grid_dims[0],
-    reinterpret_cast<fftwf_complex*>(_lambda.data()),
-    reinterpret_cast<fftwf_complex*>(_lambda.data()),
-    FFTW_BACKWARD, FFTW_PATIENT
-  );
-  std::cout << "Done!" << std::endl;
+  // std::cout << "Selecting inverse DFT algorithm... " << std::flush;
+  // __backward_fft_plan = fftwf_plan_dft_3d(
+  //   __lambda_grid_dims[2], __lambda_grid_dims[1], __lambda_grid_dims[0],
+  //   reinterpret_cast<fftwf_complex*>(_lambda.data()),
+  //   reinterpret_cast<fftwf_complex*>(_lambda.data()),
+  //   FFTW_BACKWARD, FFTW_PATIENT
+  // );
+  // std::cout << "Done!" << std::endl;
 
-  fftwf_export_wisdom_to_filename(dualres::fftw_wisdom_file().c_str());
+  // fftwf_export_wisdom_to_filename(dualres::fftw_wisdom_file().c_str());
   
 
   // Now compute _lambda
   // _lambda itself is never low-rank adjusted
   std::cout << "Computing eigen values... " << std::flush;
-  _lambda = dualres::circulant_base_3d<scalar_type>(__image_grid_dims, Qform_yh,
+  _lambda = dualres::circulant_base_3d<scalar_type>(
+    __image_grid_dims, Qform_yh,
     compute_lambda_on_extended_grid).template cast<complex_type>();
   for (int i = 0; i < _lambda.size(); i++) {
     _lambda[i] = complex_type(dualres::kernels::rbf(
-      _lambda[i].real(), covariance_parameters[1], covariance_parameters[2],
-      covariance_parameters[0]), 0);
+        _lambda[i].real(), covariance_parameters[1],
+        covariance_parameters[2], covariance_parameters[0]),
+      0);
   }
-  fftwf_execute(__forward_fft_plan);
+  __dft.forward(_lambda.data());
+  // fftwf_execute(__forward_fft_plan);
   _tau_sq_inv = 1 / covariance_parameters[0];
 
   // Get indices where real parts of eigen values are < 0
@@ -248,7 +267,10 @@ dualres::MultiResParameters<T>::MultiResParameters(
     if (_lambda[i].real() <= 0)
       _nonpositive_eigen_values.push_back(i);
   }
-  std::cout << "Done!" << std::endl;
+  std::cout << "Done!\n"
+	    << "\t<Maximal eigen value = "
+	    << _lambda[0] << ">"
+	    << std::endl;
     
 
   std::cout << (_lambda.size() - _nonpositive_eigen_values.size())
@@ -262,7 +284,8 @@ dualres::MultiResParameters<T>::MultiResParameters(
     throw std::domain_error("Too many negative eigen values");
   
 
-  __lambda_grid_indices = ijk_yh.col(2) * __lambda_grid_dims[0] * __lambda_grid_dims[1] +
+  __lambda_grid_indices =
+    ijk_yh.col(2) * __lambda_grid_dims[0] * __lambda_grid_dims[1] +
     ijk_yh.col(1) * __lambda_grid_dims[0] + ijk_yh.col(0);
 
 
@@ -319,16 +342,18 @@ dualres::MultiResParameters<T>::_compute_gradient(
   //   throw std::logic_error("Insufficient data for parameters");
 #endif
   // __temp_product.setZero();  
-  fftwf_execute_dft(__forward_fft_plan,
-    reinterpret_cast<fftwf_complex*>(mu_star.data()),
-    reinterpret_cast<fftwf_complex*>(__temp_product.data())
-  );
+  // fftwf_execute_dft(__forward_fft_plan,
+  //   reinterpret_cast<fftwf_complex*>(mu_star.data()),
+  //   reinterpret_cast<fftwf_complex*>(__temp_product.data())
+  // );
+  __dft.forward(mu_star.data(), __temp_product.data());
   __temp_product /= -(scalar_type)_lambda.size() * _lambda;
   _low_rank_adjust(__temp_product);
-  fftwf_execute_dft(__backward_fft_plan,
-    reinterpret_cast<fftwf_complex*>(__temp_product.data()),
-    reinterpret_cast<fftwf_complex*>(__temp_product.data())
-  );
+  __dft.inverse(__temp_product.data());
+  // fftwf_execute_dft(__backward_fft_plan,
+  //   reinterpret_cast<fftwf_complex*>(__temp_product.data()),
+  //   reinterpret_cast<fftwf_complex*>(__temp_product.data())
+  // );
   _real_mu = dualres::nullary_index(mu_star.matrix().real(), __lambda_grid_indices);
   // _set_real_mu(mu_star);
   // _grad = -af::dft(af::idft(mu_star) / _lambda * _positive_eigen_values / mu_star.elements());
@@ -401,10 +426,11 @@ dualres::MultiResParameters<T>::_log_prior(
   // 				  * _positive_eigen_values * __Fh_x));
   complex_type __lp(0, 0);
   // __temp_product.setZero();
-  fftwf_execute_dft(__forward_fft_plan,
-    reinterpret_cast<fftwf_complex*>(mu_star.data()),
-    reinterpret_cast<fftwf_complex*>(__temp_product.data())
-  );
+  __dft.forward(mu_star.data(), __temp_product.data());
+  // fftwf_execute_dft(__forward_fft_plan,
+  //   reinterpret_cast<fftwf_complex*>(mu_star.data()),
+  //   reinterpret_cast<fftwf_complex*>(__temp_product.data())
+  // );
   _low_rank_adjust(__temp_product);
 
   // complex_type __lp =
@@ -507,10 +533,11 @@ dualres::MultiResParameters<T>::_potential_energy() {
   const complex_type _czero(0, 0);
   complex_type __pe(0, 0);
   // __temp_product.setZero();
-  fftwf_execute_dft(__forward_fft_plan,
-    reinterpret_cast<fftwf_complex*>(_momentum.data()),
-    reinterpret_cast<fftwf_complex*>(__temp_product.data())
-  );
+  __dft.forward(_momentum.data(), __temp_product.data());
+  // fftwf_execute_dft(__forward_fft_plan,
+  //   reinterpret_cast<fftwf_complex*>(_momentum.data()),
+  //   reinterpret_cast<fftwf_complex*>(__temp_product.data())
+  // );
   // _lambda_mass is already low-rank adjusted
 
   // complex_type __pe = dualres::compute_quadratic_with_complex_diagonal(
@@ -583,18 +610,20 @@ dualres::MultiResParameters<T>::update(
   for (int step = 0; step < L; step++) {
     k = (step == (L - 1)) ? 0.5 : 1;
     // __temp_product.setZero();
-    fftwf_execute_dft(__forward_fft_plan,
-      reinterpret_cast<fftwf_complex*>(_momentum.data()),
-      reinterpret_cast<fftwf_complex*>(__temp_product.data())
-    );
+    __dft.forward(_momentum.data(), __temp_product.data());
+    // fftwf_execute_dft(__forward_fft_plan,
+    //   reinterpret_cast<fftwf_complex*>(_momentum.data()),
+    //   reinterpret_cast<fftwf_complex*>(__temp_product.data())
+    // );
     // __temp_product *= (eps / _lambda_mass.size()) * _lambda_mass;
     __temp_product /= _lambda_mass * ((scalar_type)_lambda_mass.size() / eps);
     _low_rank_adjust(__temp_product);
     // _lambda_mass is already low-rank adjusted
-    fftwf_execute_dft(__backward_fft_plan,
-      reinterpret_cast<fftwf_complex*>(__temp_product.data()),
-      reinterpret_cast<fftwf_complex*>(__temp_product.data())
-    );
+    __dft.inverse(__temp_product.data());
+    // fftwf_execute_dft(__backward_fft_plan,
+    //   reinterpret_cast<fftwf_complex*>(__temp_product.data()),
+    //   reinterpret_cast<fftwf_complex*>(__temp_product.data())
+    // );
     _mu_star += __temp_product;
     _momentum += k * eps * _compute_gradient(data, _mu_star);
   }
@@ -635,7 +664,10 @@ void dualres::MultiResParameters<T>::_compute_mass_matrix_eigen_values() {
   // _lambda_mass = (-1 / (_lambda * _sigma_sq_inv[0] + 1) + 1) /
   //   _sigma_sq_inv[0];
   // _lambda_mass = (_lambda * _sigma_sq_inv[0] + 1) / _lambda;
+  // if (_n_datasets == 1)
   _lambda_mass = 1 / _lambda + _sigma_sq_inv[0];
+  // else
+  // _lambda_mass = 1 / _lambda + _sigma_sq_inv[0] + _sigma_sq_inv[1];
   _low_rank_adjust(_lambda_mass);
 };
 
@@ -653,16 +685,18 @@ void dualres::MultiResParameters<T>::_initialize_mu(
     _mu.coeffRef(i) = complex_type(__Standard_Gaussian(dualres::rng()),
 				   __Standard_Gaussian(dualres::rng()));
   }
-  fftwf_execute_dft(__backward_fft_plan,
-    reinterpret_cast<fftwf_complex*>(_mu.data()),
-    reinterpret_cast<fftwf_complex*>(_mu.data())
-  );
+  // fftwf_execute_dft(__backward_fft_plan,
+  //   reinterpret_cast<fftwf_complex*>(_mu.data()),
+  //   reinterpret_cast<fftwf_complex*>(_mu.data())
+  // );
+  __dft.forward(_mu.data());
   _mu *= _lambda.sqrt() / (k * (scalar_type)_mu.size());
   _low_rank_adjust(_mu);
-  fftwf_execute_dft(__forward_fft_plan,
-    reinterpret_cast<fftwf_complex*>(_mu.data()),
-    reinterpret_cast<fftwf_complex*>(_mu.data())
-  );
+  __dft.inverse(_mu.data());
+  // fftwf_execute_dft(__forward_fft_plan,
+  //   reinterpret_cast<fftwf_complex*>(_mu.data()),
+  //   reinterpret_cast<fftwf_complex*>(_mu.data())
+  // );
    _real_mu = dualres::nullary_index(_mu.matrix().real(), __lambda_grid_indices);
    // _set_real_mu(_mu);
 };
@@ -704,16 +738,18 @@ void dualres::MultiResParameters<T>::_sample_momentum() {
   // 			 _momentum.coeffRef(__lambda_grid_indices[i]) ).real();
   // }
   _initial_energy *= -0.5;
-  fftwf_execute_dft(__forward_fft_plan,
-    reinterpret_cast<fftwf_complex*>(_momentum.data()),
-    reinterpret_cast<fftwf_complex*>(_momentum.data())
-  );
+  // fftwf_execute_dft(__forward_fft_plan,
+  //   reinterpret_cast<fftwf_complex*>(_momentum.data()),
+  //   reinterpret_cast<fftwf_complex*>(_momentum.data())
+  // );
+  __dft.forward(_momentum.data());
   _momentum *= _lambda_mass.sqrt() / (scalar_type)_momentum.size();
   _low_rank_adjust(_momentum);
-  fftwf_execute_dft(__backward_fft_plan,
-    reinterpret_cast<fftwf_complex*>(_momentum.data()),
-    reinterpret_cast<fftwf_complex*>(_momentum.data())
-  );
+  __dft.inverse(_momentum.data());
+  // fftwf_execute_dft(__backward_fft_plan,
+  //   reinterpret_cast<fftwf_complex*>(_momentum.data()),
+  //   reinterpret_cast<fftwf_complex*>(_momentum.data())
+  // );
 };
 
 

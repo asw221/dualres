@@ -143,12 +143,12 @@ namespace dualres {
   
   
 
-  template< typename ImageType = float >
-  dualres::kriging_matrix_data<float> get_sparse_kriging_matrix_data(
+  template< typename ScalarType = float, typename ImageType = float >
+  dualres::kriging_matrix_data<ScalarType> get_sparse_kriging_matrix_data(
     const nifti_image* const high_res,
     const nifti_image* const std_res,
-    const std::vector<float> &rbf_params,
-    const float &neighborhood_radius
+    const std::vector<ScalarType> &rbf_params,
+    const ScalarType &neighborhood_radius
   ) {
     // Compute kriging matrix data formatted to translate to sparse,
     // compressed, row-oriented matrix types. Resultant column indices correspond
@@ -163,21 +163,27 @@ namespace dualres {
     ImageType voxel_value_hr;
 
     std::cout << "Computing neighborhoods" << std::endl;
+    const float nhood_radius = (float)neighborhood_radius;
     const Eigen::MatrixXi P = dualres::neighborhood_perturbation(
-      Qform_hr, neighborhood_radius);
+      Qform_hr, nhood_radius);
     // std::cout << P << std::endl;
     
     if (P.rows() > 5e3)
-      throw std::logic_error("get_sparse_kriging_array_data: neighborhood >5e3 voxels");
+      throw std::logic_error(
+      "get_sparse_kriging_array_data: neighborhood >5e3 voxels");
     
     
     std::cout << "Computing kernel distance matrix" << std::endl;
+    std::vector<float> covar_params(rbf_params.size());
+    for (int i = 0; i < (int)rbf_params.size(); i++)
+      covar_params[i] = (float)rbf_params[i];
     const Eigen::MatrixXf K =
-      dualres::perturbation_kernel_distances<>(P, Qform_hr, rbf_params);
+      dualres::perturbation_kernel_distances<>(P, Qform_hr, covar_params);
     // std::cout << "\n" << K << "\n" << std::endl;
 
 
-    const dualres::nifti_bounding_box bb_hr = dualres::get_bounding_box(high_res);
+    const dualres::nifti_bounding_box bb_hr =
+      dualres::get_bounding_box(high_res);
     const Eigen::Vector3i bhr_dims = bb_hr.ijk_max - bb_hr.ijk_min +
       Eigen::Vector3i::Ones();
     std::vector<int> bounded_nonzero_index_hr =
@@ -204,9 +210,10 @@ namespace dualres {
     // Qform_std.col(3) = Qform_hr.col(3);
     
     Eigen::VectorXf k_prime;    // 
-    Eigen::VectorXf _w_;        // one row of kriging matrix weights
+    Eigen::Matrix<ScalarType, Eigen::Dynamic, 1> _w_;
+      // one row of kriging matrix weights
     
-    dualres::kriging_matrix_data<float> kmd;
+    dualres::kriging_matrix_data<ScalarType> kmd;
     kmd.cum_row_counts.resize(ijk_std.rows() + 1);
     kmd.cum_row_counts[0] = 0;
     // kmd.ncol = bhr_dims.prod();
@@ -221,7 +228,8 @@ namespace dualres {
     std::vector<float> kernel_distances;
     
     
-    float dist, w_sum;
+    float dist;
+    ScalarType w_sum;
     int empty_row_count = 0, row_count = 0, voxel_offset_hr, bhr_i;
 
 
@@ -273,13 +281,16 @@ namespace dualres {
 	    //   (current_ijk_hr[0] - bb_hr.ijk_min[0]) * bhr_dims[2] * bhr_dims[1];
 	    // bounded_hr_index.push_back(bhr_i);  // (i)
 	    if (bounded_nonzero_index_hr[bhr_i] >= 0) {
-	      bounded_hr_index.push_back(bounded_nonzero_index_hr[bhr_i]);  // (i)
-	      perturbation_index.push_back(j);                              // (ii)
+	      // (i)
+	      bounded_hr_index.push_back(bounded_nonzero_index_hr[bhr_i]);
+	      // (ii)
+	      perturbation_index.push_back(j);
 	      dist = (Qform_std * current_ijk_std -
 		      Qform_hr * current_ijk_hr.cast<float>()).norm() +
 		eps0;
+	      // (iii)
 	      kernel_distances.push_back(dualres::kernels::rbf(dist,
-                rbf_params[1], rbf_params[2], rbf_params[0]));              // (iii)
+                covar_params[1], covar_params[2], covar_params[0]));
 	      row_count++;
 	    }
 	  }
@@ -294,21 +305,23 @@ namespace dualres {
 	empty_row_count++;
       }
       else {
-	k_prime = Eigen::Map<Eigen::VectorXf>(kernel_distances.data(), kernel_distances.size());
+	k_prime = Eigen::Map<Eigen::VectorXf>(
+          kernel_distances.data(), kernel_distances.size());
 	_w_ = dualres::eigen_select_symmetric(K, perturbation_index)
-	  .colPivHouseholderQr().solve(k_prime);
+	  .colPivHouseholderQr().solve(k_prime)
+	  .template cast<ScalarType>();
 	// _w_ = dualres::nullary_index(K,
         //   Eigen::Map<Eigen::VectorXi>(perturbation_index.data(), perturbation_index.size()),
         //   Eigen::Map<Eigen::VectorXi>(perturbation_index.data(), perturbation_index.size()))
 	//   .colPivHouseholderQr().solve(k_prime);
 	w_sum = _w_.sum();
-	if (w_sum == 0) w_sum = 1;
+	if (w_sum == 0)  w_sum = 1;
 	if (!isnan(w_sum)) {
 	  _w_ /= w_sum;
 	  kmd._Data.insert(kmd._Data.end(), std::make_move_iterator(_w_.data()),
 			   std::make_move_iterator(_w_.data() + _w_.size()));
-	  kmd.column_indices.insert(kmd.column_indices.end(), bounded_hr_index.begin(),
-				    bounded_hr_index.end());
+	  kmd.column_indices.insert(kmd.column_indices.end(),
+            bounded_hr_index.begin(), bounded_hr_index.end());
 	  kmd.cum_row_counts[i + 1] += _w_.size();
 	}
       }
