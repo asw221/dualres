@@ -96,6 +96,7 @@ namespace dualres {
 	  dualres::qform_matrix(_high_res_),
 	  dualres::use_lambda_method::EXTENDED
         );
+	_theta_.add_data_to_mu(_data_);
 
 	T mh_rate, log_lik;
 	int save_count = 0;

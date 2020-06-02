@@ -1,6 +1,8 @@
 
 CXX := clang++
-CXXFLAGS := -g -Wall -std=c++17 -O2 -DNDEBUG
+CXXFLAGS := -g -Wall -std=c++17 -O2 -DNDEBUG -DDUALRES_SINGLE_PRECISION
+
+## -DDUALRES_SINGLE_PRECISION
 
 SRCDIR := src
 BUILDDIR := build

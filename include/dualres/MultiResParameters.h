@@ -78,6 +78,9 @@ namespace dualres {
     scalar_type sigma(const int which) const;
     scalar_type tau() const;
 
+    void add_data_to_mu(
+      const typename dualres::MultiResData<scalar_type> &data
+    );
 
     
   private:
@@ -420,10 +423,6 @@ typename dualres::MultiResParameters<T>::scalar_type
 dualres::MultiResParameters<T>::_log_prior(
   typename dualres::MultiResParameters<T>::ComplexArrayType &mu_star
 ) {
-  // __Fh_x = af::idft(mu_star) / std::sqrt((scalar_type)mu_star.elements());
-  // scalar_type __lp = -0.5 *
-  //   af::sum<scalar_type>(af::real(af::conjg(__Fh_x) / _lambda
-  // 				  * _positive_eigen_values * __Fh_x));
   complex_type __lp(0, 0);
   // __temp_product.setZero();
   __dft.forward(mu_star.data(), __temp_product.data());
@@ -433,22 +432,26 @@ dualres::MultiResParameters<T>::_log_prior(
   // );
   _low_rank_adjust(__temp_product);
 
-  // complex_type __lp =
-  //   dualres::compute_inverse_quadratic_with_complex_diagonal(
-  //     __temp_product, _lambda);
-
-  // #pragma omp parallel for reduction(+ : __lp)
+#ifdef DUALRES_SINGLE_PRECISION
+  complex_type __A, __B, __zero(0, 0);
+  for (int i = 0; i < __temp_product.size(); i++) {
+    if (_lambda.coeffRef(i).real() > 0) {
+      __A = ( std::conj(__temp_product.coeffRef(i)) *
+	     __temp_product.coeffRef(i) / _lambda.coeffRef(i) ) -
+	__zero;
+      __B    = __lp + __A;
+      __zero = (__B - __lp) - __A;
+      __lp   = __B;
+    }
+  }
+#else
   for (int i = 0; i < __temp_product.size(); i++) {
     if (_lambda.coeffRef(i).real() > 0) {
       __lp += std::conj(__temp_product.coeffRef(i)) *
 	__temp_product.coeffRef(i) / _lambda.coeffRef(i);
     }
   }
-  // for (int i = 0; i < __lambda_grid_indices.size(); i++) {
-  //   __lp += std::conj(__temp_product.coeffRef(__lambda_grid_indices[i])) *
-  //     __temp_product.coeffRef(__lambda_grid_indices[i]) /
-  //     _lambda.coeffRef(__lambda_grid_indices[i]);
-  // }
+#endif
   return -0.5 * (__lp.real() + __lp.imag()) / _lambda.size();
 };
 
@@ -475,14 +478,17 @@ dualres::MultiResParameters<T>::_log_likelihood(
     throw std::logic_error("Insufficient data for parameters");
 #endif
   scalar_type __ll(0);
-  _real_mu = dualres::nullary_index(mu_star.matrix().real(), __lambda_grid_indices);
+  _real_mu = dualres::nullary_index(mu_star.matrix().real(),
+				    __lambda_grid_indices);
   // _set_real_mu(mu_star);
   __ll = _sigma_sq_inv[0] * (data.Yh() - _real_mu).squaredNorm();
   if (_n_datasets == 2) {
-    __ll += _sigma_sq_inv[1] * (data.Ys() - (data.W() * _real_mu)).squaredNorm();
+    __ll += _sigma_sq_inv[1] *
+      (data.Ys() - (data.W() * _real_mu)).squaredNorm();
   }
   else if (_n_datasets > 2) {
-    throw std::logic_error("Likelihood only implemented for single or dual resolution");
+    throw std::logic_error(
+      "Likelihood only implemented for single or dual resolution");
   }
   return -0.5 * __ll;
 };
@@ -540,14 +546,22 @@ dualres::MultiResParameters<T>::_potential_energy() {
   // );
   // _lambda_mass is already low-rank adjusted
 
-  // complex_type __pe = dualres::compute_quadratic_with_complex_diagonal(
-  //   __temp_product, _lambda_mass);
-  // Shockingly, the only way I can get the quadratic products to work is by
-  // using serial for loops. OpenMP/Eigen expressions don't seem to work
-  // 
   // __pe = (__temp_product.matrix().adjoint() *
   // 	  (_lambda_mass * __temp_product).matrix())[0];
-  
+
+#ifdef DUALRES_SINGLE_PRECISION
+  complex_type __A, __B, __zero(0, 0);
+  for (int i = 0; i < __temp_product.size(); i++) {
+    if (_lambda_mass.coeffRef(i) != _czero) {
+      __A = ( std::conj(__temp_product.coeffRef(i)) *
+	__temp_product.coeffRef(i) /
+	      _lambda_mass.coeffRef(i) ) - __zero;
+      __B    = __pe + __A;
+      __zero = (__B - __pe) - __A;
+      __pe   = __B;
+    }
+  }
+#else
   for (int i = 0; i < __temp_product.size(); i++) {
     if (_lambda_mass.coeffRef(i) != _czero) {
       __pe += std::conj(__temp_product.coeffRef(i)) *
@@ -555,6 +569,7 @@ dualres::MultiResParameters<T>::_potential_energy() {
 	_lambda_mass.coeffRef(i);
     }
   }
+#endif
   return -0.5 * (__pe.real() + __pe.imag()) / _lambda_mass.size();
 };
 
@@ -582,6 +597,20 @@ typename dualres::MultiResParameters<T>::scalar_type
 dualres::MultiResParameters<T>::tau() const {
   return std::sqrt(1 / _tau_sq_inv);
 };
+
+
+template< typename T >
+void dualres::MultiResParameters<T>::add_data_to_mu(
+  const typename dualres::MultiResData<
+    typename dualres::MultiResParameters<T>::scalar_type> &data
+) {
+  for (int i = 0; i < __lambda_grid_indices.size(); i++) {
+    _mu.coeffRef(__lambda_grid_indices.coeffRef(i)) +=
+      complex_type(data.Yh().coeffRef(i), 0);
+    _real_mu.coeffRef(i) += data.Yh().coeffRef(i);
+  }
+};
+
 
 
 
@@ -726,18 +755,29 @@ void dualres::MultiResParameters<T>::_initialize_sigma(
 template< typename T >
 void dualres::MultiResParameters<T>::_sample_momentum() {
   _initial_energy = 0;
+#ifdef DUALRES_SINGLE_PRECISION
+  scalar_type __A, __B, __zero(0);
+#endif
   for (int i = 0; i < _momentum.size(); i++) {
     _momentum.coeffRef(i) = complex_type(__Standard_Gaussian(dualres::rng()),
 					 __Standard_Gaussian(dualres::rng()));
+    
+#ifdef DUALRES_SINGLE_PRECISION
+    __A = ( std::conj(_momentum.coeffRef(i)) *
+			 _momentum.coeffRef(i) ).real() -
+      __zero;
+    // imaginary part will always be 0
+    __B    = _initial_energy + __A;
+    __zero = (__B - _initial_energy) - __A;
+    _initial_energy = __B;
+#else
     _initial_energy += ( std::conj(_momentum.coeffRef(i)) *
 			 _momentum.coeffRef(i) ).real();
     // imaginary part will always be 0
-  }
-  // for (int i = 0; i < __lambda_grid_indices.size(); i++) {
-  //   _initial_energy += ( std::conj(_momentum.coeffRef(__lambda_grid_indices[i])) *
-  // 			 _momentum.coeffRef(__lambda_grid_indices[i]) ).real();
-  // }
+#endif
+  }  // for (int i = 0; i < _momentum.size() ...
   _initial_energy *= -0.5;
+  
   // fftwf_execute_dft(__forward_fft_plan,
   //   reinterpret_cast<fftwf_complex*>(_momentum.data()),
   //   reinterpret_cast<fftwf_complex*>(_momentum.data())
