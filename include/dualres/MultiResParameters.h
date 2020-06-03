@@ -755,27 +755,29 @@ void dualres::MultiResParameters<T>::_initialize_sigma(
 template< typename T >
 void dualres::MultiResParameters<T>::_sample_momentum() {
   _initial_energy = 0;
+  
 #ifdef DUALRES_SINGLE_PRECISION
   scalar_type __A, __B, __zero(0);
-#endif
   for (int i = 0; i < _momentum.size(); i++) {
     _momentum.coeffRef(i) = complex_type(__Standard_Gaussian(dualres::rng()),
 					 __Standard_Gaussian(dualres::rng()));
     
-#ifdef DUALRES_SINGLE_PRECISION
     __A = ( std::conj(_momentum.coeffRef(i)) *
 			 _momentum.coeffRef(i) ).real() -
-      __zero;
-    // imaginary part will always be 0
+      __zero;  // imaginary part will always be 0
     __B    = _initial_energy + __A;
     __zero = (__B - _initial_energy) - __A;
     _initial_energy = __B;
+  }
 #else
+  for (int i = 0; i < _momentum.size(); i++) {
+    _momentum.coeffRef(i) = complex_type(__Standard_Gaussian(dualres::rng()),
+					 __Standard_Gaussian(dualres::rng()));
     _initial_energy += ( std::conj(_momentum.coeffRef(i)) *
 			 _momentum.coeffRef(i) ).real();
-    // imaginary part will always be 0
+  }
 #endif
-  }  // for (int i = 0; i < _momentum.size() ...
+    // imaginary part will always be 0
   _initial_energy *= -0.5;
   
   // fftwf_execute_dft(__forward_fft_plan,

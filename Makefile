@@ -1,6 +1,6 @@
 
 CXX := clang++
-CXXFLAGS := -g -Wall -std=c++17 -O2 -DNDEBUG -DDUALRES_SINGLE_PRECISION
+CXXFLAGS := -g -Wall -std=c++17 -O2 -DNDEBUG
 
 ## -DDUALRES_SINGLE_PRECISION
 
