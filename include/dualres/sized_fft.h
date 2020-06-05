@@ -70,6 +70,7 @@ namespace dualres {
 
     int dimension() const;
     int grid_length() const;
+    int save_plans() const;
     
     void forward(complex_type* input) const;
     void forward(complex_type* input, complex_type* output) const;
@@ -80,7 +81,6 @@ namespace dualres {
     
     void operator= (const dualres::sized_fft<RealType> &rhs);
 
-    void save_plans() const;
 
     std::vector<int> grid_dimensions() const;
   
@@ -221,6 +221,21 @@ int dualres::sized_fft<RealType>::grid_length() const {
 };
 
 
+
+
+template<>
+int dualres::sized_fft<double>::save_plans() const {
+  return ::fftw_export_wisdom_to_filename(dualres::fftw_wisdom_file().c_str());
+};
+
+template<>
+int dualres::sized_fft<float>::save_plans() const {
+  return ::fftwf_export_wisdom_to_filename(dualres::fftw_wisdom_file().c_str());
+};
+
+
+
+
 template< typename RealType >
 void dualres::sized_fft<RealType>::forward(
   typename dualres::sized_fft<RealType>::complex_type* input
@@ -348,18 +363,6 @@ void dualres::sized_fft<float>::operator= (
   _init = true;
 };
 
-
-
-
-template<>
-void dualres::sized_fft<double>::save_plans() const {
-  ::fftw_export_wisdom_to_filename(dualres::fftw_wisdom_file().c_str());
-};
-
-template<>
-void dualres::sized_fft<float>::save_plans() const {
-  ::fftwf_export_wisdom_to_filename(dualres::fftw_wisdom_file().c_str());
-};
 
 
 template< typename RealType >

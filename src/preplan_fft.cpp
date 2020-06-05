@@ -19,13 +19,16 @@
 
 
 
-// Assumes FFTW_PATIENT flag
-
 
 int main (int argc, char* argv[]) {
+#ifdef DUALRES_SINGLE_PRECISION
   typedef float scalar_type;
-  typedef typename std::complex<float> complex_type;
-  typedef typename Eigen::Array<complex_type, Eigen::Dynamic, 1> ComplexArrayType;
+#else
+  typedef double scalar_type;
+#endif
+  typedef typename std::complex<scalar_type> complex_type;
+  typedef typename Eigen::Array<complex_type, Eigen::Dynamic, 1>
+    ComplexArrayType;
   
   dualres::FFTWWisdomCommandParser<scalar_type> inputs(argc, argv);
   if (!inputs)
@@ -35,20 +38,18 @@ int main (int argc, char* argv[]) {
 
   dualres::initialize_temporary_directory();
   dualres::set_number_of_threads(inputs.threads());
-
-  fftwf_plan_with_nthreads(dualres::threads());
-  std::cout << "[FFTW running on " << dualres::threads()
+  // ::fftwf_plan_with_nthreads(dualres::threads());
+  std::cout << "[dualres running on " << dualres::threads()
 	    << " cores]\n";
 
   
   // Read image header and find correct eigen vector grid dimensions
-  // std::cout << "Image file: " << inputs.image_file() << std::endl;
   nifti_image* __nii;
   dualres::nifti_bounding_box bbx;
   try {
-    __nii = nifti_image_read(inputs.image_file().c_str(), 1);
+    __nii = dualres::nifti_image_read(inputs.image_file(), 1);
     bbx = dualres::get_bounding_box(__nii);
-    nifti_image_free(__nii);
+    ::nifti_image_free(__nii);
   }
   catch (...) {
     std::cerr << "Error reading data from file: " << inputs.image_file()
@@ -59,19 +60,18 @@ int main (int argc, char* argv[]) {
   Eigen::Array3d temp_grid_dims = 2 *
     (bbx.ijk_max.cast<double>() - bbx.ijk_min.cast<double>()).array();
   if (!inputs.native_grid()) {
-    temp_grid_dims = Eigen::pow(2.0, (temp_grid_dims.log() / std::log(2.0)).ceil()).eval();
+    temp_grid_dims = Eigen::pow(2.0,
+      (temp_grid_dims.log() / std::log(2.0)).ceil()).eval();
   }
-  const Eigen::Vector3i grid_dims = temp_grid_dims.cast<int>().matrix();
+  const Eigen::Vector3i grid_dims =
+    temp_grid_dims.cast<int>().matrix();
 
 
-  // Initialize lambda, compute optimal FFT plans
-  ComplexArrayType _lambda = ComplexArrayType::Constant(grid_dims.prod(), complex_type(0, 0));
-  // std::cout << "dim(lambda) = (" << _lambda.rows() << ", " << _lambda.cols() << ")" << std::endl;
 
-
-  // Import any existing wisdom
-  if (dualres::utilities::file_exists(dualres::fftw_wisdom_file().string()))
-    fftwf_import_wisdom_from_filename(dualres::fftw_wisdom_file().c_str());
+  // // Import any existing wisdom
+  //    ^^ now taken care of by sized_fft class
+  // if (dualres::utilities::file_exists(dualres::fftw_wisdom_file().string()))
+  //   fftwf_import_wisdom_from_filename(dualres::fftw_wisdom_file().c_str());
 
   
   // Adopt requested planner flag (patient/exhaustive search)
@@ -80,50 +80,29 @@ int main (int argc, char* argv[]) {
     __flag = FFTW_EXHAUSTIVE;
   }
 
-  
-  // dualres algorithms compute eigen vectors in column-major order (in keeping
-  // with indexing of nifti_image->data); construct FFTW plans assuming such an order
-  // Forward ---------------------------------------------------------
-  std::cout << "Finding optimal forward FFT plan on grid of size ("
-	    << grid_dims[0] << " x " << grid_dims[1] << " x " << grid_dims[2]
-	    << ")...  " << std::flush;
+
+  // --- Identify optimal plans --------------------------------------
+  // dualres algorithms compute eigen vectors in column-major order
+  // (in keeping with indexing of nifti_image->data);
+  // -> construct FFTW plans assuming such an order
+  std::cout << "Finding optimal FFT plans on grid of size ("
+	    << grid_dims[0] << " x " << grid_dims[1] << " x "
+	    << grid_dims[2] << ")...  "
+	    << std::flush;
   auto start_time = std::chrono::high_resolution_clock::now();
-  fftwf_plan __forward_fft_plan = fftwf_plan_dft_3d(
-    grid_dims[2], grid_dims[1], grid_dims[0],
-    reinterpret_cast<fftwf_complex*>(_lambda.data()),
-    reinterpret_cast<fftwf_complex*>(_lambda.data()),
-    FFTW_FORWARD, __flag
-  );
+  dualres::sized_fft<scalar_type> __dft(
+    grid_dims[0], grid_dims[1], grid_dims[2], __flag);
+  // fftwf_plan __forward_fft_plan = fftwf_plan_dft_3d(
+  //   grid_dims[2], grid_dims[1], grid_dims[0],
+  //   reinterpret_cast<fftwf_complex*>(_lambda.data()),
+  //   reinterpret_cast<fftwf_complex*>(_lambda.data()),
+  //   FFTW_FORWARD, __flag
+  // );
   auto stop_time = std::chrono::high_resolution_clock::now();
-  auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop_time - start_time);
-  auto duration_sec = std::chrono::duration_cast<std::chrono::seconds>(stop_time - start_time);
-  std::cout << "Done!\n\t(computation took ";
-  if (duration_sec.count() > 60) {
-    std::cout << std::setprecision(2) << std::fixed
-	      << ((double)duration_sec.count() / 60) << " min)"
-	      << std::endl;
-  }
-  else {
-    std::cout << std::setprecision(2) << std::fixed
-	      << ((double)duration.count() / 1e6) << " sec)"
-	      << std::endl;
-  }
-  
-  
-  // Backward --------------------------------------------------------
-  std::cout << "Finding optimal inverse FFT plan on grid of size ("
-	    << grid_dims[0] << " x " << grid_dims[1] << " x " << grid_dims[2]
-	    << ")...  " << std::flush;
-  start_time = std::chrono::high_resolution_clock::now();
-  fftwf_plan __backward_fft_plan = fftwf_plan_dft_3d(
-    grid_dims[2], grid_dims[1], grid_dims[0],
-    reinterpret_cast<fftwf_complex*>(_lambda.data()),
-    reinterpret_cast<fftwf_complex*>(_lambda.data()),
-    FFTW_BACKWARD, __flag
-  );
-  stop_time = std::chrono::high_resolution_clock::now();
-  duration = std::chrono::duration_cast<std::chrono::microseconds>(stop_time - start_time);
-  duration_sec = std::chrono::duration_cast<std::chrono::seconds>(stop_time - start_time);
+  auto duration = std::chrono::duration_cast<std::chrono::microseconds>
+    (stop_time - start_time);
+  auto duration_sec = std::chrono::duration_cast<std::chrono::seconds>
+    (stop_time - start_time);
   std::cout << "Done!\n\t(computation took ";
   if (duration_sec.count() > 60) {
     std::cout << std::setprecision(2) << std::fixed
@@ -136,67 +115,85 @@ int main (int argc, char* argv[]) {
 	      << std::endl;
   }
 
-
-  // Wisdom export
-  int export_status = fftwf_export_wisdom_to_filename(dualres::fftw_wisdom_file().c_str());
+  
+  // --- Wisdom export -----------------------------------------------
+  int export_status = __dft.save_plans();
+  // int export_status = fftwf_export_wisdom_to_filename(
+  //   dualres::fftw_wisdom_file().c_str());
   if (export_status == 0) {
     std::cerr << "\nWarning: wisdom file not written!" << std::endl;
   }
   else {
-    std::cout << "Wisdom earned: " << dualres::fftw_wisdom_file().string()
+    std::cout << "Wisdom earned: "
+	      << dualres::fftw_wisdom_file().string()
 	      << std::endl;
   }
 
-  // Print FFT execution times
-  start_time = std::chrono::high_resolution_clock::now();
-  fftwf_execute(__forward_fft_plan);
-  stop_time = std::chrono::high_resolution_clock::now();
-  duration = std::chrono::duration_cast<std::chrono::microseconds>(stop_time - start_time);
-  std::cout << "Each forward DFT will take approximately " << std::setprecision(5) << std::fixed
-	    << ((double)duration.count() / 1e6) << " sec" << std::endl;
   
+  // --- Print FFT execution times -----------------------------------
+  ComplexArrayType _lambda = ComplexArrayType::Constant(
+    grid_dims.prod(), complex_type(0, 0));
   start_time = std::chrono::high_resolution_clock::now();
-  fftwf_execute(__backward_fft_plan);
-  stop_time = std::chrono::high_resolution_clock::now();
-  duration = std::chrono::duration_cast<std::chrono::microseconds>(stop_time - start_time);
-  std::cout << "Each inverse DFT will take approximately " << std::setprecision(5) << std::fixed
-	    << ((double)duration.count() / 1e6) << " sec\n" << std::endl;
-
-
-  // dualres::sized_fft<scalar_type> FFT;
-  // // Accuracy check:
-  // std::cout << "Checking new method accuracy:" << std::endl;
-  // scalar_type __mse(0);
-  // dualres::sized_fft<scalar_type> FFT(grid_dims[0], grid_dims[1], grid_dims[2]);
-  // _lambda = ComplexArrayType::Random(grid_dims.prod());
-  // ComplexArrayType _lambda_copy = _lambda;
   // fftwf_execute(__forward_fft_plan);
-
-  // FFT.forward(_lambda_copy.data());
-  // for (int i = 0; i < _lambda.size(); i++) {
-  //   __mse += ( std::conj(_lambda[i] - _lambda_copy[i]) *
-  // 	       (_lambda[i] - _lambda_copy[i]) ).real();
-  // }
-  // __mse /= _lambda.size();
-  // std::cout << "Forward DFT MSE = " << __mse << std::endl;
-
+  __dft.forward(_lambda.data());
+  stop_time = std::chrono::high_resolution_clock::now();
+  duration = std::chrono::duration_cast<std::chrono::microseconds>
+    (stop_time - start_time);
+  std::cout << "\nEach forward DFT will take approximately "
+	    << std::setprecision(5) << std::fixed
+	    << ((double)duration.count() / 1e6) << " sec"
+	    << std::endl;
+  
+  start_time = std::chrono::high_resolution_clock::now();
   // fftwf_execute(__backward_fft_plan);
-  // FFT.inverse(_lambda_copy.data());
-  // __mse = 0;
-  // for (int i = 0; i < _lambda.size(); i++) {
-  //   __mse += ( std::conj(_lambda[i] - _lambda_copy[i]) *
-  // 	       (_lambda[i] - _lambda_copy[i]) ).real();
-  // }
-  // __mse /= _lambda.size();
-  // std::cout << "Backward DFT MSE = " << __mse << std::endl;
-  
-  
+  __dft.inverse(_lambda.data());
+  stop_time = std::chrono::high_resolution_clock::now();
+  duration = std::chrono::duration_cast<std::chrono::microseconds>
+    (stop_time - start_time);
+  std::cout << "Each inverse DFT will take approximately "
+	    << std::setprecision(5) << std::fixed
+	    << ((double)duration.count() / 1e6) << " sec\n"
+	    << std::endl;
 
-  // Cleanup
-  fftwf_destroy_plan(__forward_fft_plan);
-  fftwf_destroy_plan(__backward_fft_plan);
-  fftwf_cleanup_threads();
+
+  // --- Cleanup -----------------------------------------------------
+#ifdef DUALRES_SINGLE_PRECISION
+  ::fftwf_cleanup_threads();
+#else
+  ::fftw_cleanup_threads();
+#endif
 }
+
+
+
+
+
+  
+  // // Backward --------------------------------------------------------
+  // std::cout << "Finding optimal inverse FFT plan on grid of size ("
+  // 	    << grid_dims[0] << " x " << grid_dims[1] << " x " << grid_dims[2]
+  // 	    << ")...  " << std::flush;
+  // start_time = std::chrono::high_resolution_clock::now();
+  // fftwf_plan __backward_fft_plan = fftwf_plan_dft_3d(
+  //   grid_dims[2], grid_dims[1], grid_dims[0],
+  //   reinterpret_cast<fftwf_complex*>(_lambda.data()),
+  //   reinterpret_cast<fftwf_complex*>(_lambda.data()),
+  //   FFTW_BACKWARD, __flag
+  // );
+  // stop_time = std::chrono::high_resolution_clock::now();
+  // duration = std::chrono::duration_cast<std::chrono::microseconds>(stop_time - start_time);
+  // duration_sec = std::chrono::duration_cast<std::chrono::seconds>(stop_time - start_time);
+  // std::cout << "Done!\n\t(computation took ";
+  // if (duration_sec.count() > 60) {
+  //   std::cout << std::setprecision(2) << std::fixed
+  // 	      << ((double)duration_sec.count() / 60) << " min)"
+  // 	      << std::endl;
+  // }
+  // else {
+  //   std::cout << std::setprecision(2) << std::fixed
+  // 	      << ((double)duration.count() / 1e6) << " sec)"
+  // 	      << std::endl;
+  // }
 
 
 

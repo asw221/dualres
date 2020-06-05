@@ -16,20 +16,18 @@ LIB := -Llib/nifti/lib -L/usr/local/lib -lniftiio -lznz -lz -lnlopt -lboost_file
 
 
 
-all: niftilib dualgpm clear_fftw_history estimate_rbf estimate_snr gaussian_smooth image_info preplan_fft rbf_neighborhood simulate_data_from_image
+all: dualgpm clear_fftw_history estimate_rbf estimate_snr gaussian_smooth image_info preplan_fft rbf_neighborhood simulate_data_from_image
 
-
-niftilib:
-	cd lib/nifti
-	make clean
-	make all
-	echo "NIfTI lib build"
-	cd ../../
 
 
 
 dualgpm: $(SRCDIR)/dualgpm.cpp
 	$(CXX) $< $(CXXFLAGS) $(INC) $(LIB) -DEIGEN_DONT_PARALLELIZE -DEIGEN_DONT_VECTORIZE -o $(EXECDIR)/dualgpm
+
+
+dualgpmf: $(SRCDIR)/dualgpm.cpp
+	$(CXX) $< $(CXXFLAGS) $(INC) $(LIB) -DDUALRES_SINGLE_PRECISION -DEIGEN_DONT_PARALLELIZE -DEIGEN_DONT_VECTORIZE -o $(EXECDIR)/dualgpm
+
 
 clear_fftw_history: $(SRCDIR)/clear_fftw_history.cpp
 	$(CXX) $< $(CXXFLAGS) $(INC) $(LIB) -o $(EXECDIR)/clear_fftw_history

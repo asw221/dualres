@@ -18,7 +18,7 @@ endif()
 # Check if we can use PkgConfig
 find_package(PkgConfig QUIET)
 
-if( PKG_CONFIG_FOUND AND NOT FFTW_ROOT )
+if( PKG_CONFIG_FOUND AND NOT NLOPT_ROOT )
   pkg_check_modules( PKG_NLOPT QUIET "nlopt" )
 endif()
 

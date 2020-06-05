@@ -3,7 +3,6 @@
 #include <complex>
 #include <cmath>
 #include <Eigen/Core>
-// #include <fftw3.h>
 #include <iomanip>
 #include <iostream>
 #include <limits>
@@ -357,9 +356,9 @@ dualres::MultiResParameters<T>::_compute_gradient(
   //   reinterpret_cast<fftwf_complex*>(__temp_product.data()),
   //   reinterpret_cast<fftwf_complex*>(__temp_product.data())
   // );
-  _real_mu = dualres::nullary_index(mu_star.matrix().real(), __lambda_grid_indices);
-  // _set_real_mu(mu_star);
-  // _grad = -af::dft(af::idft(mu_star) / _lambda * _positive_eigen_values / mu_star.elements());
+  _real_mu = dualres::nullary_index(mu_star.matrix().real(),
+				    __lambda_grid_indices);
+  
   if (_n_datasets == 1) {
     _real_sub_grad = _sigma_sq_inv[0] * (data.Yh() - _real_mu);
   }
@@ -369,7 +368,8 @@ dualres::MultiResParameters<T>::_compute_gradient(
 			   data.W() ).transpose();
   }
   else {
-    throw std::logic_error("Gradient only implemented for single or dual resolution");
+    throw std::logic_error(
+      "Gradient only implemented for single or dual resolution");
   }
   for (int i = 0; i < __lambda_grid_indices.size(); i++)
     __temp_product.coeffRef(__lambda_grid_indices.coeffRef(i)) +=
@@ -430,7 +430,7 @@ dualres::MultiResParameters<T>::_log_prior(
   //   reinterpret_cast<fftwf_complex*>(mu_star.data()),
   //   reinterpret_cast<fftwf_complex*>(__temp_product.data())
   // );
-  _low_rank_adjust(__temp_product);
+  // _low_rank_adjust(__temp_product);
 
 #ifdef DUALRES_SINGLE_PRECISION
   complex_type __A, __B, __zero(0, 0);
@@ -679,7 +679,9 @@ dualres::MultiResParameters<T>::update(
   // _set_real_mu(_mu);
   // ^^ _real_mu must be set before _update_sigma_sq_inv(), _update_tau_sq_inv()
   _update_sigma_sq_inv(data);
-  // _update_tau_sq_inv();
+#ifndef DUALRES_DONT_UPDATE_TAU
+  _update_tau_sq_inv();
+#endif
   return std::min((scalar_type)1.0, R);
 };
 
