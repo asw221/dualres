@@ -32,6 +32,7 @@ Eigen::Array<scalar_type, Eigen::Dynamic, 1> dualres::circulant_base_3d(
   const dualres::qform_type &Qform,  // 
   const bool use_nearest_power_2
 ) {
+  typedef typename Eigen::Array<scalar_type, Eigen::Dynamic, 1> ArrayType;
   const int D = 3;  // 3d grid
   Eigen::Vector4f ijk0 = Eigen::Vector4f::Zero();
   float j, k;
@@ -63,7 +64,8 @@ Eigen::Array<scalar_type, Eigen::Dynamic, 1> dualres::circulant_base_3d(
     dim0_seq[ll] = i - 1;
   }
     
-  Eigen::Array<scalar_type, Eigen::Dynamic, 1> base(base_len);
+  // Eigen::Array<scalar_type, Eigen::Dynamic, 1> base(base_len);
+  ArrayType base = ArrayType::Zero(base_len);
 
 #pragma omp parallel for shared(base, base_dims, dim0_seq, grid_dims, Qform) private(ijk0, j, k, ll, mm, nn) schedule(static, base_dims[0] / dualres::__internals::_N_THREADS_)
   for (ll = 0; ll < base_dims[0]; ll++) {

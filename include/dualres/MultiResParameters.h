@@ -626,8 +626,8 @@ dualres::MultiResParameters<T>::update(
   const int L
 ) {
   std::uniform_real_distribution<scalar_type> _Uniform(0, 1);
-  scalar_type k = 0.5, proposed_energy, R;
-  scalar_type lp_initial, lp_proposal;
+  scalar_type k = 0.5, proposed_energy = 0, R = 0;
+  scalar_type lp_initial = 0, lp_proposal = 0;
   _mu_star = _mu;
   _compute_mass_matrix_eigen_values();
   _sample_momentum();

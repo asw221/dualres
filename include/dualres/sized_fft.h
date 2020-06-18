@@ -90,6 +90,8 @@ namespace dualres {
     int _N;  // grid length = prod(_grid_dimensions)
     fftw_plan_type __forward_plan;
     fftw_plan_type __inverse_plan;
+    fftw_plan_type __forward_plan_inplace;
+    fftw_plan_type __inverse_plan_inplace;
     std::vector<int> _grid_dimensions;
     unsigned int _flags;
   };
@@ -124,6 +126,7 @@ dualres::sized_fft<double>::sized_fft(
   _N = d0 * d1 * d2;
 
   std::vector<complex_type> pseudo_data(_N, complex_type(0, 0));
+  std::vector<complex_type> pseudo_data_other(_N, complex_type(0, 0));
 
   ::fftw_plan_with_nthreads(dualres::threads());
   // ::fftw_plan_with_nthreads(6);
@@ -141,6 +144,17 @@ dualres::sized_fft<double>::sized_fft(
     d2, d1, d0,
     reinterpret_cast<fftw_complex_type*>(pseudo_data.data()),
     reinterpret_cast<fftw_complex_type*>(pseudo_data.data()),
+    FFTW_BACKWARD, flags);
+  
+  __forward_plan_inplace = ::fftw_plan_dft_3d(
+    d2, d1, d0,
+    reinterpret_cast<fftw_complex_type*>(pseudo_data.data()),
+    reinterpret_cast<fftw_complex_type*>(pseudo_data_other.data()),
+    FFTW_FORWARD, flags);
+  __inverse_plan_inplace = ::fftw_plan_dft_3d(
+    d2, d1, d0,
+    reinterpret_cast<fftw_complex_type*>(pseudo_data.data()),
+    reinterpret_cast<fftw_complex_type*>(pseudo_data_other.data()),
     FFTW_BACKWARD, flags);
 
   _flags = flags;
@@ -167,6 +181,7 @@ dualres::sized_fft<float>::sized_fft(
   _N = d0 * d1 * d2;
 
   std::vector<complex_type> pseudo_data(_N, complex_type(0, 0));
+  std::vector<complex_type> pseudo_data_other(_N, complex_type(0, 0));
 
   ::fftwf_plan_with_nthreads(dualres::threads());
   // ::fftwf_plan_with_nthreads(6);
@@ -185,6 +200,17 @@ dualres::sized_fft<float>::sized_fft(
     reinterpret_cast<fftw_complex_type*>(pseudo_data.data()),
     reinterpret_cast<fftw_complex_type*>(pseudo_data.data()),
     FFTW_BACKWARD, flags);
+  
+  __forward_plan_inplace = ::fftwf_plan_dft_3d(
+    d2, d1, d0,
+    reinterpret_cast<fftw_complex_type*>(pseudo_data.data()),
+    reinterpret_cast<fftw_complex_type*>(pseudo_data_other.data()),
+    FFTW_FORWARD, flags);
+  __inverse_plan_inplace = ::fftwf_plan_dft_3d(
+    d2, d1, d0,
+    reinterpret_cast<fftw_complex_type*>(pseudo_data.data()),
+    reinterpret_cast<fftw_complex_type*>(pseudo_data_other.data()),
+    FFTW_BACKWARD, flags);
 
   _flags = flags;
   _init = true;
@@ -197,6 +223,9 @@ dualres::sized_fft<double>::~sized_fft() {
   if (_init) {
     ::fftw_destroy_plan(__forward_plan);
     ::fftw_destroy_plan(__inverse_plan);
+    
+    ::fftw_destroy_plan(__forward_plan_inplace);
+    ::fftw_destroy_plan(__inverse_plan_inplace);
   }
 };
 
@@ -205,6 +234,9 @@ dualres::sized_fft<float>::~sized_fft() {
   if (_init) {
     ::fftwf_destroy_plan(__forward_plan);
     ::fftwf_destroy_plan(__inverse_plan);
+    
+    ::fftwf_destroy_plan(__forward_plan_inplace);
+    ::fftwf_destroy_plan(__inverse_plan_inplace);
   }
 };
 
@@ -236,12 +268,12 @@ int dualres::sized_fft<float>::save_plans() const {
 
 
 
-template< typename RealType >
-void dualres::sized_fft<RealType>::forward(
-  typename dualres::sized_fft<RealType>::complex_type* input
-) const {
-  forward(input, input);
-};
+// template< typename RealType >
+// void dualres::sized_fft<RealType>::forward(
+//   typename dualres::sized_fft<RealType>::complex_type* input
+// ) const {
+//   forward(input, input);
+// };
 
 
 template<>
@@ -256,6 +288,19 @@ void dualres::sized_fft<double>::forward(
   );
 };
 
+
+template<>
+void dualres::sized_fft<double>::forward(
+  typename dualres::sized_fft<double>::complex_type* input
+) const {
+  ::fftw_execute_dft(
+    __forward_plan_inplace,
+    reinterpret_cast<fftw_complex_type*>(input),
+    reinterpret_cast<fftw_complex_type*>(input)
+  );
+};
+
+
 template<>
 void dualres::sized_fft<float>::forward(
   typename dualres::sized_fft<float>::complex_type* input,
@@ -268,13 +313,24 @@ void dualres::sized_fft<float>::forward(
   );
 };
 
-
-template< typename RealType >
-void dualres::sized_fft<RealType>::inverse(
-  typename dualres::sized_fft<RealType>::complex_type* input
+template<>
+void dualres::sized_fft<float>::forward(
+  typename dualres::sized_fft<float>::complex_type* input
 ) const {
-  inverse(input, input);
+  ::fftwf_execute_dft(
+    __forward_plan_inplace,
+    reinterpret_cast<fftw_complex_type*>(input),
+    reinterpret_cast<fftw_complex_type*>(input)
+  );
 };
+
+
+// template< typename RealType >
+// void dualres::sized_fft<RealType>::inverse(
+//   typename dualres::sized_fft<RealType>::complex_type* input
+// ) const {
+//   inverse(input, input);
+// };
 
 
 template<>
@@ -290,6 +346,18 @@ void dualres::sized_fft<double>::inverse(
 };
 
 template<>
+void dualres::sized_fft<double>::inverse(
+  typename dualres::sized_fft<double>::complex_type* input
+) const {
+  ::fftw_execute_dft(
+    __inverse_plan_inplace,
+    reinterpret_cast<fftw_complex_type*>(input),
+    reinterpret_cast<fftw_complex_type*>(input)
+  );  
+};
+
+
+template<>
 void dualres::sized_fft<float>::inverse(
   typename dualres::sized_fft<float>::complex_type* input,
   typename dualres::sized_fft<float>::complex_type* output
@@ -298,6 +366,17 @@ void dualres::sized_fft<float>::inverse(
     __inverse_plan,
     reinterpret_cast<fftw_complex_type*>(input),
     reinterpret_cast<fftw_complex_type*>(output)
+  );  
+};
+
+template<>
+void dualres::sized_fft<float>::inverse(
+  typename dualres::sized_fft<float>::complex_type* input
+) const {
+  ::fftwf_execute_dft(
+    __inverse_plan_inplace,
+    reinterpret_cast<fftw_complex_type*>(input),
+    reinterpret_cast<fftw_complex_type*>(input)
   );  
 };
 
@@ -317,14 +396,28 @@ void dualres::sized_fft<double>::operator= (
   ::fftw_plan_with_nthreads(dualres::threads());
 
   std::vector<complex_type> pseudo_data(_N, complex_type(0, 0));
+  std::vector<complex_type> pseudo_data_other(_N, complex_type(0, 0));
   
   __forward_plan = ::fftw_plan_dft_3d(
+    _grid_dimensions[2], _grid_dimensions[1], _grid_dimensions[0],
+    reinterpret_cast<fftw_complex_type*>(pseudo_data.data()),
+    reinterpret_cast<fftw_complex_type*>(pseudo_data_other.data()),
+    FFTW_FORWARD, rhs._flags);
+  
+  __inverse_plan = ::fftw_plan_dft_3d(
+    _grid_dimensions[2], _grid_dimensions[1], _grid_dimensions[0],
+    reinterpret_cast<fftw_complex_type*>(pseudo_data.data()),
+    reinterpret_cast<fftw_complex_type*>(pseudo_data_other.data()),
+    FFTW_BACKWARD, rhs._flags);
+
+  
+  __forward_plan_inplace = ::fftw_plan_dft_3d(
     _grid_dimensions[2], _grid_dimensions[1], _grid_dimensions[0],
     reinterpret_cast<fftw_complex_type*>(pseudo_data.data()),
     reinterpret_cast<fftw_complex_type*>(pseudo_data.data()),
     FFTW_FORWARD, rhs._flags);
   
-  __inverse_plan = ::fftw_plan_dft_3d(
+  __inverse_plan_inplace = ::fftw_plan_dft_3d(
     _grid_dimensions[2], _grid_dimensions[1], _grid_dimensions[0],
     reinterpret_cast<fftw_complex_type*>(pseudo_data.data()),
     reinterpret_cast<fftw_complex_type*>(pseudo_data.data()),
@@ -332,6 +425,7 @@ void dualres::sized_fft<double>::operator= (
   
   _init = true;
 };
+
 
 
 template<>
@@ -347,14 +441,28 @@ void dualres::sized_fft<float>::operator= (
   ::fftwf_plan_with_nthreads(dualres::threads());
 
   std::vector<complex_type> pseudo_data(_N, complex_type(0, 0));
+  std::vector<complex_type> pseudo_data_other(_N, complex_type(0, 0));
   
   __forward_plan = ::fftwf_plan_dft_3d(
+    _grid_dimensions[2], _grid_dimensions[1], _grid_dimensions[0],
+    reinterpret_cast<fftw_complex_type*>(pseudo_data.data()),
+    reinterpret_cast<fftw_complex_type*>(pseudo_data_other.data()),
+    FFTW_FORWARD, rhs._flags);
+  
+  __inverse_plan = ::fftwf_plan_dft_3d(
+    _grid_dimensions[2], _grid_dimensions[1], _grid_dimensions[0],
+    reinterpret_cast<fftw_complex_type*>(pseudo_data.data()),
+    reinterpret_cast<fftw_complex_type*>(pseudo_data_other.data()),
+    FFTW_BACKWARD, rhs._flags);
+
+  
+  __forward_plan_inplace = ::fftwf_plan_dft_3d(
     _grid_dimensions[2], _grid_dimensions[1], _grid_dimensions[0],
     reinterpret_cast<fftw_complex_type*>(pseudo_data.data()),
     reinterpret_cast<fftw_complex_type*>(pseudo_data.data()),
     FFTW_FORWARD, rhs._flags);
   
-  __inverse_plan = ::fftwf_plan_dft_3d(
+  __inverse_plan_inplace = ::fftwf_plan_dft_3d(
     _grid_dimensions[2], _grid_dimensions[1], _grid_dimensions[0],
     reinterpret_cast<fftw_complex_type*>(pseudo_data.data()),
     reinterpret_cast<fftw_complex_type*>(pseudo_data.data()),

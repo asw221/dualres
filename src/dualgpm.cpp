@@ -61,6 +61,8 @@ int main(int argc, char *argv[]) {
   ::omp_set_num_threads(dualres::threads());
   Eigen::setNbThreads(dualres::threads());
 
+  dualres::initialize_temporary_directory();
+
 
 #ifdef DUALRES_SINGLE_PRECISION
   const int FFTW_STATUS = ::fftwf_init_threads();

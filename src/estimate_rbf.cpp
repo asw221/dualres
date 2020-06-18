@@ -1,5 +1,8 @@
 
 #include <cstdio>
+#include <Eigen/Core>
+#include <Eigen/Dense>
+#include <Eigen/QR>
 #include <fstream>
 #include <iostream>
 #include <nifti1_io.h>
@@ -21,6 +24,9 @@ int main(int argc, char *argv[]) {
 
   ::nifti_image* __nii;
   dualres::mce_data mce;
+  // Eigen::Vector3d _grad;
+  // Eigen::Matrix3d _Cov_approx;
+  // Eigen::Matrix3d Hessian;
   try {
     __nii = dualres::nifti_image_read(inputs.image_file(), 1);
     std::cout << "Computing covariances across the image... " << std::flush;
@@ -69,6 +75,8 @@ int main(int argc, char *argv[]) {
   
   
   // Estimate RBF parameters
+  // Starting point can (should?) be made more robust by running an approximate
+  // Global optimization first 
   std::vector<double> theta{mce.covariance[0] * 0.8, 0.6, 1.5};
   
   std::cout << "Estimating smoothness (radial basis function approximation)... "
@@ -78,6 +86,18 @@ int main(int argc, char *argv[]) {
       inputs.parameter(0), inputs.parameter(1), inputs.parameter(2),
       inputs.xtol_rel()
     );
+    // _grad = dualres::_rbf_lsq_gradient(theta, mce);
+    // _Cov_approx = (_grad * _grad.transpose()).completeOrthogonalDecomposition()
+    //   .pseudoInverse();
+    // _Cov_approx *= dualres::_rbf_mse(theta, mce);
+    // for (int i = 0; i < theta.size(); i++) {
+    //   if (inputs.parameter_fixed(i)) {
+    // 	// _grad[i] = 0;
+    // 	_Cov_approx.row(i) *= 0;
+    // 	_Cov_approx.col(i) *= 0;
+    //   }
+    // }
+    // Hessian = dualres::_rbf_lsq_hessian(theta, mce);
   }
   catch (const std::exception &__err) {
     std::cerr << "\n"
@@ -100,6 +120,7 @@ int main(int argc, char *argv[]) {
 	    << "  <FWHM      = "
 	    << dualres::kernels::rbf_bandwidth_to_fwhm(theta[1], theta[2])
 	    << " (mm)>\n"
+    // << "Approximate Covariance:\n" << _Cov_approx << "\n"
 	    << std::endl;
   
 };

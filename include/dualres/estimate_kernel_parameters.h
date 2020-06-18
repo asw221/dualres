@@ -1,4 +1,5 @@
 
+#include <algorithm>
 #include <cmath>
 #include <iostream>
 #include <Eigen/Core>
@@ -115,16 +116,86 @@ namespace dualres {
     std::vector<double> &grad,
     void *data
   ) {
-    kernel_data *_dat = (kernel_data*)data;
+    dualres::kernel_data *_dat = (dualres::kernel_data*)data;
     const int N = _dat->distance.size();
     double objective = 0.0, resid;
-    for (int i = 0; i < N; i++) {
+    for (int i = 0; i < N; i++) {  // 0th element not used
       resid = _dat->covariance[i] - x[0] *
 	std::exp(-x[1] * std::pow(_dat->distance[i], x[2]));
       objective += resid * resid / N;
     }
     return objective;
   };
+
+
+
+  double _rbf_mse(
+    const std::vector<double> &x,
+    const dualres::mce_data &data
+  ) {
+    const int N = data.distance.size();
+    double objective = 0, residual;
+    for (int i = 0; i < N; i++) {
+      residual = data.covariance[i] - x[0] *
+	std::exp(-x[1] * std::pow(data.distance[i], x[2]));
+      objective += residual * residual / N;
+    }
+    return objective;
+  };
+  
+
+  Eigen::Vector3d _rbf_lsq_gradient(
+    const std::vector<double> &x,
+    const dualres::mce_data &data
+  ) {
+    const int N = data.distance.size();
+    const double eps0 = 1e-4;
+    Eigen::Vector3d grad = Eigen::Vector3d::Zero();
+    double d_x2, log_d, residual, rho, temp;
+    for (int i = 0; i < N; i++) {
+      d_x2 = std::pow(data.distance[i], x[2]);
+      rho  = std::exp(-x[1] * d_x2);
+      residual = data.covariance[i] - x[0] * rho;
+      log_d = std::log(std::max((double)data.distance[i], eps0));
+      temp = 2 * rho * residual;
+
+      grad[0] += temp;
+      grad[1] += x[0] * d_x2 * temp;
+      grad[2] += x[0] * x[1] * d_x2 * log_d * temp;
+    }
+    return grad;
+  };
+  
+  
+  Eigen::Matrix3d _rbf_lsq_hessian(
+    const std::vector<double> &x,
+    const dualres::mce_data &data
+  ) {
+    const int N = data.distance.size();
+    const double eps0 = 1e-4;
+    Eigen::Matrix3d H = Eigen::Matrix3d::Zero();
+    double d_x2, log_d, residual, rho, temp;
+    for (int i = 0; i < N; i++) {  // 0th element not used
+      d_x2 = std::pow(data.distance[i], x[2]);
+      rho  = std::exp(-x[1] * d_x2);
+      residual = data.covariance[i] - x[0] * rho;
+      log_d = std::log(std::max((double)data.distance[i], eps0));
+      temp  = d_x2 * rho * (data.covariance[i] - 2 * x[0] * rho);
+
+      H(0, 0) +=  2 * rho * rho;
+      H(1, 0) +=  2 * temp;
+      H(2, 0) +=  2 * x[1] * log_d * temp;
+      H(1, 1) += -2 * x[0] * d_x2 * temp;
+      H(2, 1) +=  2 * x[0] * d_x2 * log_d * (rho * residual - x[1] * temp);
+      H(2, 2) +=  2 * x[0] * x[1] * log_d * log_d * d_x2 *
+	(rho * residual - x[1] * temp);
+    }
+    H(0, 1) = H(1, 0);
+    H(0, 2) = H(2, 0);
+    H(1, 2) = H(2, 1);
+    return H;
+  };
+  
 
 
   double _rbf_constraint(
@@ -189,6 +260,7 @@ namespace dualres {
     //
     // Initialize optimization
     nlopt::opt optimizer(nlopt::LN_COBYLA, K);
+    // nlopt::opt optimizer(nlopt::GN_ORIG_DIRECT_L, K);
     // Prepare data
     _x.reserve(data.npairs.size());
     _y.reserve(data.npairs.size());

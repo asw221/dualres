@@ -35,8 +35,8 @@ target_link_libraries(dualgpm Boost::filesystem FFTW::FloatOpenMP
 		libniftiio.a libznz.a ZLIB::ZLIB)
 set_target_properties(dualgpm PROPERTIES RUNTIME_OUTPUT_DIRECTORY
 		"${CMAKE_BINARY_DIR}/bin")
-target_compile_definitions(dualgpm PUBLIC EIGEN_DONT_PARALLELIZE
-				   EIGEN_DONT_VECTORIZE)
+## target_compile_definitions(dualgpm PUBLIC EIGEN_DONT_PARALLELIZE
+## 				   EIGEN_DONT_VECTORIZE)
 
 
 add_executable(dualgpmf dualgpm.cpp)
@@ -44,7 +44,7 @@ target_link_libraries(dualgpmf Boost::filesystem FFTW::FloatOpenMP
 		FFTW::Float FFTW::DoubleOpenMP FFTW::Double
 		Eigen3::Eigen NLOPT::nlopt OpenMP::OpenMP_CXX
 		libniftiio.a libznz.a ZLIB::ZLIB)
-set_target_properties(dualgpm PROPERTIES RUNTIME_OUTPUT_DIRECTORY
+set_target_properties(dualgpmf PROPERTIES RUNTIME_OUTPUT_DIRECTORY
 		"${CMAKE_BINARY_DIR}/bin")
 target_compile_definitions(dualgpmf PUBLIC DUALRES_SINGLE_PRECISION)
 ## target_compile_definitions(dualgpmf PUBLIC EIGEN_DONT_PARALLELIZE
