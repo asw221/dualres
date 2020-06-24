@@ -3,14 +3,18 @@
 #include <fstream>
 #include <iomanip>
 #include <iostream>
+#include <mutex>
 #include <string>
 
 #include "dualres/defines.h"
 
 
 bool dualres::initialize_temporary_directory() {
-  boost::filesystem::create_directory(dualres::__internals::_TEMP_DIR_);
-  return boost::filesystem::is_directory(dualres::__internals::_TEMP_DIR_);
+  std::lock_guard<std::mutex> _lock(dualres::__internals::_MTX_);
+  boost::filesystem::create_directory(dualres::cache_dir());
+  return boost::filesystem::is_directory(dualres::cache_dir());
+  // boost::filesystem::create_directory(dualres::__internals::_TEMP_DIR_);
+  // return boost::filesystem::is_directory(dualres::__internals::_TEMP_DIR_);
 };
 
 

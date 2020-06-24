@@ -2,12 +2,13 @@
 #include <complex>
 #include <fftw3.h>
 #include <iostream>
-// #include <memory>
+#include <mutex>
 #include <stdexcept>
 // #include <utility>
 #include <vector>
 
-// #include "dualres/utilities.h"
+#include "dualres/defines.h"
+#include "dualres/utilities.h"
 
 
 #ifndef _DUALRES_SIZED_FFT_
@@ -257,11 +258,13 @@ int dualres::sized_fft<RealType>::grid_length() const {
 
 template<>
 int dualres::sized_fft<double>::save_plans() const {
+  std::lock_guard<std::mutex> _lock(dualres::__internals::_MTX_);
   return ::fftw_export_wisdom_to_filename(dualres::fftw_wisdom_file().c_str());
 };
 
 template<>
 int dualres::sized_fft<float>::save_plans() const {
+  std::lock_guard<std::mutex> _lock(dualres::__internals::_MTX_);
   return ::fftwf_export_wisdom_to_filename(dualres::fftw_wisdom_file().c_str());
 };
 

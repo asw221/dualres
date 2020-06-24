@@ -1,7 +1,9 @@
 
 #include <algorithm>
 #include <boost/filesystem.hpp>
+#include <mutex>
 #include <random>
+#include <stdlib.h>  // getenv
 #include <string>
 #include <thread>
 
@@ -35,6 +37,24 @@ namespace dualres {
   };
 
 
+
+  dualres::path cache_dir() {
+    const char* user_home_cstr = getenv("HOME");
+    std::string _cache_d;
+    if (user_home_cstr == NULL) {
+      _cache_d = boost::filesystem::temp_directory_path().string() +
+	dualres::path::preferred_separator +
+	"dualresTemp";
+    }
+    else {
+      _cache_d = std::string(user_home_cstr) +
+	dualres::path::preferred_separator +
+	".dualres.cache";
+    }
+    return dualres::path(_cache_d);
+  };
+
+
   
 
   /// @cond INTERNAL
@@ -48,22 +68,37 @@ namespace dualres {
 
     const int _MAX_THREADS_ = std::thread::hardware_concurrency();
     int _N_THREADS_ = std::max(_MAX_THREADS_ * 4 / 5, 1);
+
+    std::mutex _MTX_;
     
     rng_type _RNG_(42);
+
     
 
     const dualres::path _TEMP_DIR_(
       boost::filesystem::temp_directory_path().string() +
-      path::preferred_separator + "dualresTemp" +
-      path::preferred_separator
+      dualres::path::preferred_separator + "dualresTemp" +
+      dualres::path::preferred_separator
     );
+
     
+#ifdef DUALRES_SINGLE_PRECISION
     const dualres::path _FFTW_WISDOM_FILE_(
-      _TEMP_DIR_.string() + "__fftw_wisdom"
+      dualres::cache_dir().string() +
+      dualres::path::preferred_separator +
+      "__fftwf_wisdom"
     );
+    // _TEMP_DIR_.string() + "__fftwf_wisdom"
+#else
+    const dualres::path _FFTW_WISDOM_FILE_(
+      dualres::cache_dir().string() +
+      dualres::path::preferred_separator +
+      "__fftw_wisdom"
+    );
+    // _TEMP_DIR_.string() + "__fftw_wisdom"
+#endif
     
-  }
-  // namespace __internals
+  }  // namespace __internals
   /// @endcond
 
   
@@ -88,42 +123,3 @@ namespace dualres {
 
 
 
-
-
-
-/*
-  template< typename T >
-  class data_types {
-  public:
-    typedef T value_type;
-
-    static constexpr ::af_dtype af_dtype = ::af_dtype::f32;
-    static constexpr ::af_dtype af_ctype = ::af_dtype::c32;
-    static constexpr dualres::nifti_data nifti_data = dualres::nifti_data::OTHER;
-    // constexpr ::af_dtype af_dtype() const;    
-    // constexpr ::af_dtype af_ctype() const;
-    // constexpr dualres::nifti_data nifti_data() const;
-  };
-
-
-    template<>
-    class data_types<float> {
-    public:
-      typedef float value_type;
-
-      static constexpr ::af_dtype af_dtype = ::af_dtype::f32;
-      static constexpr ::af_dtype af_ctype = ::af_dtype::c32;
-      static constexpr dualres::nifti_data nifti_data = dualres::nifti_data::FLOAT;
-    };
-
-  
-    template<>
-    class data_types<double> {
-    public:
-      typedef double value_type;
-
-      static constexpr ::af_dtype af_dtype = ::af_dtype::f64;
-      static constexpr ::af_dtype af_ctype = ::af_dtype::c64;
-      static constexpr dualres::nifti_data nifti_data = dualres::nifti_data::DOUBLE;
-    };
-*/

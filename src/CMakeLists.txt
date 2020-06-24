@@ -35,6 +35,8 @@ target_link_libraries(dualgpm Boost::filesystem FFTW::FloatOpenMP
 		libniftiio.a libznz.a ZLIB::ZLIB)
 set_target_properties(dualgpm PROPERTIES RUNTIME_OUTPUT_DIRECTORY
 		"${CMAKE_BINARY_DIR}/bin")
+target_compile_definitions(dualgpm PUBLIC EIGEN_DONT_VECTORIZE
+		DUALRES_DONT_UPDATE_TAU)
 ## target_compile_definitions(dualgpm PUBLIC EIGEN_DONT_PARALLELIZE
 ## 				   EIGEN_DONT_VECTORIZE)
 
@@ -46,7 +48,8 @@ target_link_libraries(dualgpmf Boost::filesystem FFTW::FloatOpenMP
 		libniftiio.a libznz.a ZLIB::ZLIB)
 set_target_properties(dualgpmf PROPERTIES RUNTIME_OUTPUT_DIRECTORY
 		"${CMAKE_BINARY_DIR}/bin")
-target_compile_definitions(dualgpmf PUBLIC DUALRES_SINGLE_PRECISION)
+target_compile_definitions(dualgpmf PUBLIC DUALRES_SINGLE_PRECISION
+		EIGEN_DONT_VECTORIZE DUALRES_DONT_UPDATE_TAU)
 ## target_compile_definitions(dualgpmf PUBLIC EIGEN_DONT_PARALLELIZE
 ## 				   EIGEN_DONT_VECTORIZE)
 
@@ -94,12 +97,25 @@ set_target_properties(image_info PROPERTIES
 
 ## --- preplan_fft ---------------------------------------------------
 add_executable(preplan_fft preplan_fft.cpp)
-target_link_libraries(preplan_fft Boost::filesystem FFTW::FloatOpenMP
-		FFTW::Float FFTW::Double FFTW::DoubleOpenMP
+target_link_libraries(preplan_fft Boost::filesystem
+		FFTW::Double FFTW::DoubleOpenMP
+		FFTW::Float FFTW::FloatOpenMP
 		Eigen3::Eigen OpenMP::OpenMP_CXX
 		libniftiio.a libznz.a ZLIB::ZLIB)
 set_target_properties(preplan_fft PROPERTIES RUNTIME_OUTPUT_DIRECTORY
 		"${CMAKE_BINARY_DIR}/bin")
+
+
+add_executable(preplan_fftf preplan_fft.cpp)
+target_link_libraries(preplan_fftf Boost::filesystem 
+		FFTW::Double FFTW::DoubleOpenMP
+		FFTW::Float FFTW::FloatOpenMP
+		Eigen3::Eigen OpenMP::OpenMP_CXX
+		libniftiio.a libznz.a ZLIB::ZLIB)
+set_target_properties(preplan_fftf PROPERTIES RUNTIME_OUTPUT_DIRECTORY
+		"${CMAKE_BINARY_DIR}/bin")
+target_compile_definitions(preplan_fftf
+	PUBLIC DUALRES_SINGLE_PRECISION)
 
 
 
