@@ -124,3 +124,13 @@ target_link_libraries(rbf_neighborhood Boost::filesystem Eigen3::Eigen
 		libniftiio.a libznz.a ZLIB::ZLIB)
 set_target_properties(rbf_neighborhood PROPERTIES
 		RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
+
+
+
+## --- simulate_data_from_image --------------------------------------
+add_executable(simulate_data_from_image simulate_data_from_image.cpp)
+target_link_libraries(simulate_data_from_image Boost::filesystem
+		Eigen3::Eigen libniftiio.a libznz.a ZLIB::ZLIB)
+set_target_properties(simulate_data_from_image PROPERTIES
+		RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
+
