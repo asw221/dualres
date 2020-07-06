@@ -13,7 +13,7 @@ endif()
 
 
 
-# Anything that uses to a CommandParser object must link to
+# Anything that uses a CommandParser object must link to
 # the nifti libraries
 
 
@@ -35,8 +35,7 @@ target_link_libraries(dualgpm Boost::filesystem FFTW::FloatOpenMP
 		libniftiio.a libznz.a ZLIB::ZLIB)
 set_target_properties(dualgpm PROPERTIES RUNTIME_OUTPUT_DIRECTORY
 		"${CMAKE_BINARY_DIR}/bin")
-target_compile_definitions(dualgpm PUBLIC EIGEN_DONT_VECTORIZE
-		DUALRES_DONT_UPDATE_TAU)
+target_compile_definitions(dualgpm PUBLIC DUALRES_DONT_UPDATE_TAU)
 ## target_compile_definitions(dualgpm PUBLIC EIGEN_DONT_PARALLELIZE
 ## 				   EIGEN_DONT_VECTORIZE)
 
@@ -49,7 +48,7 @@ target_link_libraries(dualgpmf Boost::filesystem FFTW::FloatOpenMP
 set_target_properties(dualgpmf PROPERTIES RUNTIME_OUTPUT_DIRECTORY
 		"${CMAKE_BINARY_DIR}/bin")
 target_compile_definitions(dualgpmf PUBLIC DUALRES_SINGLE_PRECISION
-		EIGEN_DONT_VECTORIZE DUALRES_DONT_UPDATE_TAU)
+		DUALRES_DONT_UPDATE_TAU)
 ## target_compile_definitions(dualgpmf PUBLIC EIGEN_DONT_PARALLELIZE
 ## 				   EIGEN_DONT_VECTORIZE)
 

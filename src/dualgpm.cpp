@@ -5,6 +5,7 @@
 #include <iomanip>
 #include <iostream>
 #include <nifti1_io.h>
+#include <omp.h>
 #include <sstream>
 #include <stdio.h>
 #include <stdexcept>
