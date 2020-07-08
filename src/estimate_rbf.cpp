@@ -77,6 +77,7 @@ int main(int argc, char *argv[]) {
   // Estimate RBF parameters
   // Starting point can (should?) be made more robust by running an approximate
   // Global optimization first 
+  // std::vector<double> theta{mce.covariance[0] * 0.8, 0.6, 1.5};
   std::vector<double> theta{mce.covariance[0] * 0.8, 0.6, 1.5};
   
   std::cout << "Estimating smoothness (radial basis function approximation)... "

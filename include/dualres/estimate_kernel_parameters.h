@@ -118,11 +118,26 @@ namespace dualres {
   ) {
     dualres::kernel_data *_dat = (dualres::kernel_data*)data;
     const int N = _dat->distance.size();
+    const double eps0 = 1e-4;
+    const bool use_gradient = !grad.empty();
     double objective = 0.0, resid;
+    double d_x2, log_d, rho, temp;
+    
     for (int i = 0; i < N; i++) {  // 0th element not used
-      resid = _dat->covariance[i] - x[0] *
-	std::exp(-x[1] * std::pow(_dat->distance[i], x[2]));
+      d_x2 = std::pow(_dat->distance[i], x[2]);
+      rho  = std::exp(-x[1] * d_x2);
+      resid = _dat->covariance[i] - x[0] * rho;
+      
       objective += resid * resid / N;
+
+      if (use_gradient) {
+	log_d = std::log(std::max((double)_dat->distance[i], eps0));
+	temp = 2 * rho * resid;
+
+	grad[0] += temp / N;
+	grad[1] += x[0] * d_x2 * temp / N;
+	grad[2] += x[0] * x[1] * d_x2 * log_d * temp / N;
+      }
     }
     return objective;
   };
@@ -221,6 +236,11 @@ namespace dualres {
     void* data
   ) {
     // Constrain exponent > bandwidth
+    if (!grad.empty()) {
+      grad[0] =  0;
+      grad[1] =  1;
+      grad[2] = -1;
+    }
     return x[1] - x[2];
   };
 
@@ -276,8 +296,9 @@ namespace dualres {
     }
     //
     // Initialize optimization
+    nlopt::opt glob_optimizer(nlopt::GN_ISRES, K);
     nlopt::opt optimizer(nlopt::LN_COBYLA, K);
-    // nlopt::opt optimizer(nlopt::GN_ORIG_DIRECT_L, K);
+    
     // Prepare data
     _x.reserve(data.npairs.size());
     _y.reserve(data.npairs.size());
@@ -291,14 +312,24 @@ namespace dualres {
     _y.shrink_to_fit();
     objective_data.distance = std::move(_x);
     objective_data.covariance = std::move(_y);
+    
+    glob_optimizer.set_lower_bounds(lb);
+    glob_optimizer.set_upper_bounds(ub);
+    glob_optimizer.set_min_objective(dualres::_rbf_least_squares, &objective_data);
     optimizer.set_lower_bounds(lb);
     optimizer.set_upper_bounds(ub);
     optimizer.set_min_objective(dualres::_rbf_least_squares, &objective_data);
     // optimizer.set_min_objective(dualres::_rbf_abs_error, &objective_data);
-    if (constrained)
-      optimizer.add_inequality_constraint(dualres::_rbf_constraint, NULL, xtol);
-    optimizer.set_xtol_rel(xtol);
+    if (constrained) {
+      glob_optimizer.add_inequality_constraint(
+        dualres::_rbf_constraint, NULL, xtol);
+      optimizer.add_inequality_constraint(
+        dualres::_rbf_constraint, NULL, xtol);
+    }
+    glob_optimizer.set_xtol_rel(xtol);
+    optimizer.set_xtol_rel(xtol / 10);
     try {
+      // glob_optimizer.optimize(theta, min_obj);
       optimizer.optimize(theta, min_obj);
     }
     catch (std::exception &_e) {
