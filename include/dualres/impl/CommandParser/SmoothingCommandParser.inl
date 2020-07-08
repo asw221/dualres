@@ -21,9 +21,10 @@ template< typename T >
 void dualres::SmoothingCommandParser<T>::show_help() const {
   show_usage();
   std::cerr << "Options:\n"
-	    << "--fwhm      f1  kernel full width (mm) at half max\n"
-	    << "--exponent  f1  kernel exponent\n"
-	    << "\nimg is a valid NIfTI file, and f1 denotes a floating point "
+	    << "--fwhm      float  kernel full width (mm) at half max\n"
+	    << "--exponent  float  kernel exponent\n"
+	    << "--radius    float  extent (mm) of the local smooth\n"
+	    << "\nimg is a valid NIfTI file, and float denotes a floating point "
 	    << "parameter. Smooths the input image with a radial basis kernel "
 	    << "and writes a new NIfTI file to disc, with *_<fwhm>mm_fwhm.nii "
 	    << "appended to the original file name.\n"

@@ -128,6 +128,23 @@ namespace dualres {
   };
 
 
+  double _rbf_abs_error(
+    const std::vector<double> &x,
+    std::vector<double> &grad,
+    void *data
+  ) {
+    dualres::kernel_data *_dat = (dualres::kernel_data*)data;
+    const int N = _dat->distance.size();
+    double objective = 0.0, resid;
+    for (int i = 0; i < N; i++) {  // 0th element not used
+      resid = _dat->covariance[i] - x[0] *
+	std::exp(-x[1] * std::pow(_dat->distance[i], x[2]));
+      objective += std::abs(resid) / N;
+    }
+    return objective;
+  };
+
+
 
   double _rbf_mse(
     const std::vector<double> &x,
@@ -232,8 +249,8 @@ namespace dualres {
     std::vector<double> ub{tau_max, HUGE_VAL, 2.0 - eps0};
     // Modify lower/upper bounds for "fixed" parameters
     if ((variance - eps0) > 0) {
-      lb[0] = variance - eps0;
-      ub[0] = variance + eps0;
+      lb[0] = std::min(variance - eps0, std::max(tau_max - eps0, eps0));
+      ub[0] = std::min(variance + eps0, tau_max);
       theta[0] = variance;
       n_fixed++;
     }
@@ -277,6 +294,7 @@ namespace dualres {
     optimizer.set_lower_bounds(lb);
     optimizer.set_upper_bounds(ub);
     optimizer.set_min_objective(dualres::_rbf_least_squares, &objective_data);
+    // optimizer.set_min_objective(dualres::_rbf_abs_error, &objective_data);
     if (constrained)
       optimizer.add_inequality_constraint(dualres::_rbf_constraint, NULL, xtol);
     optimizer.set_xtol_rel(xtol);

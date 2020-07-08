@@ -154,6 +154,41 @@ namespace dualres {
 
 
   template< typename T = float >
+  class KrigingCommandParser {
+  public:
+    typedef T scalar_type;
+    enum class call_status { success, error, help };
+
+    KrigingCommandParser();
+    KrigingCommandParser(int argc, char **argv);
+    bool error() const;
+    bool help_invoked() const;
+    bool operator!() const;
+    operator bool() const;
+    scalar_type exponent() const;
+    scalar_type fwhm() const;
+    scalar_type radius() const;
+    std::string image_file() const;
+    std::string interpolant() const;
+    std::string output_image() const;
+
+    void show_help() const;
+    void show_usage() const;
+
+  protected:
+    call_status _status;
+    scalar_type _exponent;
+    scalar_type _fwhm;
+    scalar_type _radius;
+    std::string _caller;
+    std::string _image_file;
+    std::string _output_image_file;
+  };
+
+  
+
+
+  template< typename T = float >
   class SmoothingCommandParser {
   public:
     typedef T scalar_type;
@@ -278,6 +313,7 @@ void dualres::CommandParser<T>::show_usage() const {
 #include "dualres/impl/CommandParser/EstimRbfCommandParser.inl"
 #include "dualres/impl/CommandParser/FFTWWisdomCommandParser.inl"
 #include "dualres/impl/CommandParser/NeighborhoodCommandParser.inl"
+#include "dualres/impl/CommandParser/KrigingCommandParser.inl"
 #include "dualres/impl/CommandParser/SmoothingCommandParser.inl"
 
 #endif  // _DUALRES_COMMAND_PARSER_

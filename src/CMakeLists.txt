@@ -36,8 +36,10 @@ target_link_libraries(dualgpm Boost::filesystem FFTW::FloatOpenMP
 set_target_properties(dualgpm PROPERTIES RUNTIME_OUTPUT_DIRECTORY
 		"${CMAKE_BINARY_DIR}/bin")
 target_compile_definitions(dualgpm PUBLIC DUALRES_DONT_UPDATE_TAU)
-## target_compile_definitions(dualgpm PUBLIC EIGEN_DONT_PARALLELIZE
-## 				   EIGEN_DONT_VECTORIZE)
+target_compile_definitions(dualgpm PUBLIC EIGEN_DONT_PARALLELIZE)
+
+## EIGEN_DONT_PARALLELIZE
+## EIGEN_DONT_VECTORIZE
 
 
 add_executable(dualgpmf dualgpm.cpp)
@@ -49,8 +51,7 @@ set_target_properties(dualgpmf PROPERTIES RUNTIME_OUTPUT_DIRECTORY
 		"${CMAKE_BINARY_DIR}/bin")
 target_compile_definitions(dualgpmf PUBLIC DUALRES_SINGLE_PRECISION
 		DUALRES_DONT_UPDATE_TAU)
-## target_compile_definitions(dualgpmf PUBLIC EIGEN_DONT_PARALLELIZE
-## 				   EIGEN_DONT_VECTORIZE)
+target_compile_definitions(dualgpmf PUBLIC EIGEN_DONT_PARALLELIZE)
 
 
 
@@ -91,6 +92,15 @@ add_executable(image_info image_info.cpp)
 target_link_libraries(image_info Boost::filesystem Eigen3::Eigen
 		libniftiio.a libznz.a ZLIB::ZLIB)
 set_target_properties(image_info PROPERTIES
+		RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
+
+
+## --- interpolate ---------------------------------------------------
+add_executable(interpolate interpolate.cpp)
+target_link_libraries(interpolate Boost::filesystem Eigen3::Eigen
+		Eigen3::Eigen OpenMP::OpenMP_CXX
+		libniftiio.a libznz.a ZLIB::ZLIB)
+set_target_properties(interpolate PROPERTIES
 		RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
 
 

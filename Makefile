@@ -44,6 +44,9 @@ gaussian_smooth: $(SRCDIR)/gaussian_smooth.cpp
 image_info: $(SRCDIR)/image_info.cpp
 	$(CXX) $< $(CXXFLAGS) $(INC) $(LIB) -o $(EXECDIR)/image_info
 
+interpolate: $(SRCDIR)/interpolate.cpp
+	$(CXX) $< $(CXXFLAGS) $(INC) $(LIB) -o $(EXECDIR)/interpolate
+
 preplan_fft: $(SRCDIR)/preplan_fft.cpp
 	$(CXX) $< $(CXXFLAGS) $(INC) $(LIB) -o $(EXECDIR)/preplan_fft
 

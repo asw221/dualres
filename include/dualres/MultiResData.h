@@ -110,7 +110,7 @@ dualres::MultiResData<T>::MultiResData(
     kmd = dualres::get_sparse_kriging_matrix_data<scalar_type, double>(
       h_res, s_res, covariance_parameters, neighborhood_radius);
   else
-    throw std::runtime_error("MultiResData: image is of unrecognized datatype");
+    throw std::runtime_error("MultiResData: image is of unrecognized data type");
   
   std::vector<scalar_type> v_Yh = dualres::get_nonzero_data<scalar_type>(h_res);
   std::vector<scalar_type> v_Ys = dualres::get_nonzero_data<scalar_type>(s_res);
