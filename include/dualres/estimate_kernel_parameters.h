@@ -303,16 +303,30 @@ namespace dualres {
     // Prepare data
     _x.reserve(data.npairs.size());
     _y.reserve(data.npairs.size());
+    _w.reserve(data.npairs.size());
     for (int i = 1; i < data.npairs.size(); i++) {
       if (data.npairs[i] != 0) {
 	_x.push_back(std::abs((double)data.distance[i]));
 	_y.push_back((double)data.covariance[i]);
-	_w.push_back(std::sqrt((double)data.npairs[i] /
-			       std::max(data.npairs[0], 1)));
+	// _w.push_back(std::sqrt((double)data.npairs[i] /
+	// 		       std::max(data.npairs[0], 1)));
+	_w.push_back(1);
       }
     }
-    _x.shrink_to_fit();
-    _y.shrink_to_fit();
+    _x.shrink_to_fit();  // distances
+    _y.shrink_to_fit();  // covariances
+    _w.shrink_to_fit();  // weights
+    for (int i = 1; i < _x.size(); i++) {
+      for (int j = 0; j < i; j++) {
+	if (_x[i] == _x[j]) {
+	  _w[j]++;
+	  _w[i] = _w[j];
+	}
+      }
+    }
+    for (int i = 0; i < _w.size(); i++)
+      _w[i] = std::sqrt(1 / _w[i]);
+    
     objective_data.distance = std::move(_x);
     objective_data.covariance = std::move(_y);
     objective_data.weights = std::move(_w);
