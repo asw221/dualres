@@ -44,6 +44,7 @@ namespace dualres {
   struct kernel_data {  // Simplification of above with std vectors
     std::vector<double> distance;
     std::vector<double> covariance;
+    std::vector<double> weights;
     // double marginal_variance;
   };
   
@@ -123,10 +124,10 @@ namespace dualres {
     double objective = 0.0, resid;
     double d_x2, log_d, rho, temp;
     
-    for (int i = 0; i < N; i++) {  // 0th element not used
+    for (int i = 0; i < N; i++) {
       d_x2 = std::pow(_dat->distance[i], x[2]);
       rho  = std::exp(-x[1] * d_x2);
-      resid = _dat->covariance[i] - x[0] * rho;
+      resid = _dat->weights[i] * (_dat->covariance[i] - x[0] * rho);
       
       objective += resid * resid / N;
 
@@ -263,7 +264,7 @@ namespace dualres {
     const double tau_max = (double)data.covariance[0], eps0 = 1e-5;
     double min_obj;
     int retval = 0, n_fixed = 0;
-    std::vector<double> _x, _y;
+    std::vector<double> _x, _y, _w;
     kernel_data objective_data;
     std::vector<double> lb{eps0, eps0, eps0};
     std::vector<double> ub{tau_max, HUGE_VAL, 2.0 - eps0};
@@ -306,12 +307,15 @@ namespace dualres {
       if (data.npairs[i] != 0) {
 	_x.push_back(std::abs((double)data.distance[i]));
 	_y.push_back((double)data.covariance[i]);
+	_w.push_back(std::sqrt((double)data.npairs[i] /
+			       std::max(data.npairs[0], 1)));
       }
     }
     _x.shrink_to_fit();
     _y.shrink_to_fit();
     objective_data.distance = std::move(_x);
     objective_data.covariance = std::move(_y);
+    objective_data.weights = std::move(_w);
     
     glob_optimizer.set_lower_bounds(lb);
     glob_optimizer.set_upper_bounds(ub);
