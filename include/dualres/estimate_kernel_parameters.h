@@ -52,12 +52,14 @@ namespace dualres {
 
   template< typename Scalar = float >
   dualres::mce_data compute_mce_summary_data_impl(const ::nifti_image* const img) {
-    const int nx = img->nx, ny = img->ny, nvox = (int)img->nvox;
+    const int nx = img->nx, ny = img->ny, nz = img->nz, nvox = (int)img->nvox;
     Scalar* dataPtr = (Scalar*)img->data;
     double voxel_value_x, voxel_value_y;
     dualres::qform_type Q = dualres::qform_matrix(img);
     Eigen::MatrixXi P = dualres::perturbation_matrix_3d();
     Eigen::VectorXi stride = P.col(2) * nx * ny + P.col(1) * nx + P.col(0);
+    // Keep track of voxel matrix positions:
+    Eigen::Vector3i ijk_x, ijk_y;
     P.conservativeResize(P.rows(), P.cols() + 1);
     P.col(P.cols() - 1) = Eigen::VectorXi::Zero(P.rows());
     Eigen::VectorXd sum_xy = Eigen::VectorXd::Zero(P.rows());
@@ -70,8 +72,13 @@ namespace dualres {
     for (int voxel_index = 0; voxel_index < nvox; voxel_index++) {
       voxel_value_x = (double)(*dataPtr);
       if (!(isnan(voxel_value_x) || voxel_value_x == 0)) {
+	ijk_x[0] = voxel_index % nx;
+	ijk_x[1] = (voxel_index / nx) % ny;
+	ijk_x[2] = (voxel_index / (nx * ny)) % nz;
 	for (int i = 0; i < P.rows(); i++) {
-	  if (voxel_index + stride[i] >= 0 && voxel_index + stride[i] < nvox) {
+	  ijk_y = ijk_x + P.row(i).transpose();
+	  if (ijk_y[0] >= 0 && ijk_y[1] >= 0 && ijk_y[2] >= 0 &&
+	      ijk_y[0] < nx && ijk_y[1] < ny && ijk_y[2] < nz) {
 	    voxel_value_y = (double)(*(dataPtr + stride[i]));
 	    if (!(isnan(voxel_value_y) || voxel_value_y == 0)) {
 	      sum_xy[i] += voxel_value_x * voxel_value_y;
@@ -299,6 +306,8 @@ namespace dualres {
     // Initialize optimization
     nlopt::opt glob_optimizer(nlopt::GN_ISRES, K);
     nlopt::opt optimizer(nlopt::LN_COBYLA, K);
+    // nlopt::opt optimizer(nlopt::LD_SLSQP, K);
+    // nlopt::opt optimizer(nlopt::LD_MMA, K);  // <- maybe 2nd best bet
     
     // Prepare data
     _x.reserve(data.npairs.size());
@@ -316,7 +325,7 @@ namespace dualres {
     _x.shrink_to_fit();  // distances
     _y.shrink_to_fit();  // covariances
     _w.shrink_to_fit();  // weights
-    for (int i = 1; i < _x.size(); i++) {
+    for (int i = 1; i < (int)_x.size(); i++) {
       for (int j = 0; j < i; j++) {
 	if (_x[i] == _x[j]) {
 	  _w[j]++;
@@ -324,7 +333,7 @@ namespace dualres {
 	}
       }
     }
-    for (int i = 0; i < _w.size(); i++)
+    for (int i = 0; i < (int)_w.size(); i++)
       _w[i] = std::sqrt(1 / _w[i]);
     
     objective_data.distance = std::move(_x);
@@ -344,8 +353,8 @@ namespace dualres {
       optimizer.add_inequality_constraint(
         dualres::_rbf_constraint, NULL, xtol);
     }
-    glob_optimizer.set_xtol_rel(xtol);
-    optimizer.set_xtol_rel(xtol / 10);
+    glob_optimizer.set_xtol_rel(xtol * 100);
+    optimizer.set_xtol_rel(xtol);
     try {
       // glob_optimizer.optimize(theta, min_obj);
       optimizer.optimize(theta, min_obj);
