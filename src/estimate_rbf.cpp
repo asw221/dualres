@@ -79,14 +79,42 @@ int main(int argc, char *argv[]) {
   // Global optimization first 
   // std::vector<double> theta{mce.covariance[0] * 0.8, 0.6, 1.5};
   std::vector<double> theta{mce.covariance[0] * 0.8, 0.6, 1.5};
+  // std::vector<double> theta_copy(theta.size());
+  // double dtheta, tmp;
+  // const int maxiter = 30;
   
   std::cout << "Estimating smoothness (radial basis function approximation)... "
 	    << std::flush;
   try {
-    dualres::compute_rbf_parameters(theta, mce, inputs.use_constraint(),
+    // First pass to get good but rough estimate
+    dualres::compute_rbf_parameters(theta, mce,
+      inputs.use_constraint(), 1e6,
       inputs.parameter(0), inputs.parameter(1), inputs.parameter(2),
       inputs.xtol_rel()
     );
+    // std::cout << "\n(" << theta[0] << ", " << theta[1] << ", " << theta[2] << ")\n";
+    // Second pass removing potentially noisy tail data
+    // for (int i = 0; i < maxiter; i++) {
+    //   dtheta = 0;
+    //   theta_copy[0] = theta[0] ; theta_copy[1] = theta[1] ; theta_copy[2] = theta[2];
+    //   if (inputs.use_constraint() && theta[2] <= theta[1]) {
+    // 	theta[1] -= 1e-6;
+    //   }
+    //   dualres::compute_rbf_parameters(theta, mce,
+    //     inputs.use_constraint(),
+    //     dualres::kernels::rbf_inverse(0.05, theta[1], theta[2]),
+    //     inputs.parameter(0), inputs.parameter(1), inputs.parameter(2),
+    //     inputs.xtol_rel()
+    //   );
+    //   for (int i = 0; i < theta.size(); i++) {
+    // 	tmp = theta[i] - theta_copy[i];
+    // 	dtheta += tmp * tmp;
+    //   }
+    //   std::cout << "(" << theta[0] << ", " << theta[1] << ", " << theta[2]
+    // 		<< ");  dt = " << dtheta << "\n";
+    // }
+    // std::cout << std::endl;
+    //
     // _grad = dualres::_rbf_lsq_gradient(theta, mce);
     // _Cov_approx = (_grad * _grad.transpose()).completeOrthogonalDecomposition()
     //   .pseudoInverse();

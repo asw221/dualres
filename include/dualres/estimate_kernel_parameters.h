@@ -262,6 +262,7 @@ namespace dualres {
     std::vector<double> &theta,
     const dualres::mce_data &data,
     const bool constrained = true,
+    const double maxdist = 1e6,
     const double variance = -1,
     const double bandwidth = -1,
     const double exponent = -1,
@@ -304,56 +305,73 @@ namespace dualres {
     }
     //
     // Initialize optimization
-    nlopt::opt glob_optimizer(nlopt::GN_ISRES, K);
+    // nlopt::opt glob_optimizer(nlopt::GN_ISRES, K);
     nlopt::opt optimizer(nlopt::LN_COBYLA, K);
     // nlopt::opt optimizer(nlopt::LD_SLSQP, K);
     // nlopt::opt optimizer(nlopt::LD_MMA, K);  // <- maybe 2nd best bet
     
     // Prepare data
+    // std::vector<double> _first_moment;
+    // std::vector<double> _second_moment;
+    // double tmp;
     _x.reserve(data.npairs.size());
     _y.reserve(data.npairs.size());
     _w.reserve(data.npairs.size());
+    // _first_moment.reserve(data.npairs.size());
+    // _second_moment.reserve(data.npairs.size());
     for (int i = 1; i < data.npairs.size(); i++) {
-      if (data.npairs[i] != 0) {
+      if (data.npairs[i] != 0 && data.distance[i] <= maxdist) {
 	_x.push_back(std::abs((double)data.distance[i]));
 	_y.push_back((double)data.covariance[i]);
 	// _w.push_back(std::sqrt((double)data.npairs[i] /
 	// 		       std::max(data.npairs[0], 1)));
 	_w.push_back(1);
+	// _first_moment.push_back(0);
+	// _second_moment.push_back(0);
       }
     }
     _x.shrink_to_fit();  // distances
     _y.shrink_to_fit();  // covariances
     _w.shrink_to_fit();  // weights
+    // _first_moment.shrink_to_fit();
+    // _second_moment.shrink_to_fit();
     for (int i = 1; i < (int)_x.size(); i++) {
+      // _first_moment[i] += _y[i];
+      // _second_moment[i] += _y[i] * _y[i];
       for (int j = 0; j < i; j++) {
 	if (_x[i] == _x[j]) {
 	  _w[j]++;
 	  _w[i] = _w[j];
+	  // _first_moment[j] += _y[i];
+	  // _second_moment[j] += _y[i] * _y[i];
 	}
       }
     }
-    for (int i = 0; i < (int)_w.size(); i++)
+    for (int i = 0; i < (int)_w.size(); i++) {
       _w[i] = std::sqrt(1 / _w[i]);
+      // tmp = _second_moment[i] - _first_moment[i] * _first_moment[i] / _w[i];
+      // if (tmp <= 0)  tmp = 1;
+      // _w[i] = std::sqrt(1 / tmp);
+    }
     
     objective_data.distance = std::move(_x);
     objective_data.covariance = std::move(_y);
     objective_data.weights = std::move(_w);
     
-    glob_optimizer.set_lower_bounds(lb);
-    glob_optimizer.set_upper_bounds(ub);
-    glob_optimizer.set_min_objective(dualres::_rbf_least_squares, &objective_data);
+    // glob_optimizer.set_lower_bounds(lb);
+    // glob_optimizer.set_upper_bounds(ub);
+    // glob_optimizer.set_min_objective(dualres::_rbf_least_squares, &objective_data);
     optimizer.set_lower_bounds(lb);
     optimizer.set_upper_bounds(ub);
     optimizer.set_min_objective(dualres::_rbf_least_squares, &objective_data);
     // optimizer.set_min_objective(dualres::_rbf_abs_error, &objective_data);
     if (constrained) {
-      glob_optimizer.add_inequality_constraint(
-        dualres::_rbf_constraint, NULL, xtol);
+      // glob_optimizer.add_inequality_constraint(
+      //   dualres::_rbf_constraint, NULL, xtol);
       optimizer.add_inequality_constraint(
         dualres::_rbf_constraint, NULL, xtol);
     }
-    glob_optimizer.set_xtol_rel(xtol * 100);
+    // glob_optimizer.set_xtol_rel(xtol * 100);
     optimizer.set_xtol_rel(xtol);
     try {
       // glob_optimizer.optimize(theta, min_obj);

@@ -96,7 +96,7 @@ namespace dualres {
     Eigen::Vector3i col_index;
     col_index << 0, 1, 2;
     int j = 0;
-    for (int i = 0; i < duplicate.size(); i++) {
+    for (int i = 0; i < (int)duplicate.size(); i++) {
       if (!duplicate[i]) {
 	unique_index[j] = i;
 	j++;
