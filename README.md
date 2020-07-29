@@ -34,16 +34,16 @@ make
 ### Analysis
 ```
 $ ./dualres/build/bin/dualgpmf \
-       --highres /path/to/highres.nii \
-       --stdhres /path/to/stdres.nii \
-       --covariance 0.806 0.131966 1 \
-       --burnin 1000 \
-       --nsave 1000 \
-       --thin 4 \
-       --leapfrog 25 \
-       --mhtarget 0.65 \
-       --neighborhood 6.9 \
-       --threads 6 \
-       --output output_basename \
-       --seed 8675309
+       --highres /path/to/highres.nii \  # Required. Image defines inference space
+       --stdhres /path/to/stdres.nii \   # Auxiliary data
+       --covariance 0.806 0.131966 1 \   # [partial sill, bandwidth, exponent]
+       --burnin 1000 \                   # MCMC burnin iterations
+       --nsave 1000 \                    # MCMC iterations to save
+       --thin 4 \                        # MCMC thinning factor
+       --leapfrog 25 \                   # HMC number of integrator steps
+       --mhtarget 0.65 \                 # HMC target acceptance rate
+       --neighborhood 6.9 \              # Kriging approximation extent (mm)
+       --threads 6 \                     # Number of cores to use
+       --output output_basename \        # Output file base name
+       --seed 8675309                    # URNG seed
 ```
