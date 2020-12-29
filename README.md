@@ -55,10 +55,10 @@ $ ./dualres/build/bin/dualgpmf \
 #### Estimation of radial basis parameters
 ```
 $ ./dualres/build/bin/estimate_rbf \
-	   /path/to/input.nii \              # REQUIRED. Input image/data
-	   --mask /path/to/mask.nii \        # Mask for image input
-	   --exponent 1.5 \                  # Fixes the RBF exponent
-	   --xtol 1e-5                       # Set numerical tolerance
+	/path/to/input.nii \              # REQUIRED. Input image/data
+	--mask /path/to/mask.nii \        # Mask for image input
+	--exponent 1.5 \                  # Fixes the RBF exponent
+	--xtol 1e-5                       # Set numerical tolerance
 ```
 
 
