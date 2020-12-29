@@ -32,6 +32,8 @@ make
 
 
 ### Analysis
+Dual- or single-resolution models can be fit to data stored using the
+`nifti` file standard with the `dualgpmf` command:
 ```
 $ ./dualres/build/bin/dualgpmf \
 	--highres /path/to/highres.nii \  # REQUIRED. Image defines inference space
