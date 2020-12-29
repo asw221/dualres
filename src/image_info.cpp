@@ -5,6 +5,7 @@
 #include <nifti1_io.h>
 #include <string>
 
+#include "dualres/ansi.h"
 #include "dualres/nifti_manipulation.h"
 
 
@@ -20,6 +21,7 @@ int main(int argc, char *argv[]) {
   
   const std::string _input_image_file(argv[1]);
   bool error_status = false;
+  bool print_qform = false;
   // ::nifti_image* _nii;
   // Eigen::Vector3f _voxel_dims;
   
@@ -27,13 +29,20 @@ int main(int argc, char *argv[]) {
     std::cerr << "image_info: requires one NIfTI file as input\n";
     return 1;
   }
+  if (argc > 2 && std::string(argv[2]) == "--qform") {
+    print_qform = true;
+  }
   
 
   try {
     ::nifti_image* _nii = dualres::nifti_image_read(_input_image_file, 0);
     // _voxel_dims = dualres::voxel_dimensions(_nii);
     
-    std::cout << _input_image_file << ":\n"
+    std::cout << "\n"
+	      << ansi::foreground_bold
+	      << _input_image_file << ":\n"
+	      << ansi::reset
+	      << "---------------\n"
 	      << "  Data type       -  "
 	      << dualres::nifti_datatype_string(_nii)
 	      << "\n"
@@ -47,17 +56,31 @@ int main(int argc, char *argv[]) {
 	      << _nii->dx << ", " << _nii->dy << ", " << _nii->dz
 	      << ")\n";
 
-    // ::nifti_image_free(_nii);
+    if (print_qform) {
+      std::cout << "\n"
+		<< ansi::foreground_bold
+		<< "Qform matrix:\n"
+		<< ansi::reset
+		<< "---------------\n"
+		<< dualres::qform_matrix(_nii)
+		<< "\n\n";
+    }
+
+    ::nifti_image_free(_nii);
   }
   catch (const std::exception &__err) {
     error_status = true;
-    std::cerr << "Exception caught with message:\n'"
-	      << __err.what() << "'\n"
+    std::cerr << ansi::foreground_bold_magenta
+	      << "\nException caught with message:\n"
+	      << ansi::reset
+	      << "'" << __err.what() << "'\n"
 	      << std::endl;
   }
   catch (...) {
     error_status = true;
-    std::cerr << "Unknown error\n";
+    std::cerr << ansi::foreground_bold_magenta
+	      << "\nUnknown error\n"
+	      << ansi::reset;
   }
 
   if (error_status)  return 1;

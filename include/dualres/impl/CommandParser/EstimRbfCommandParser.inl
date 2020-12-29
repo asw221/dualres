@@ -21,7 +21,7 @@ void dualres::EstimRbfCommandParser<T>::show_help() const {
 	    << "\t--bandwidth float  fixes correlation bandwidth parameter\n"
 	    << "\t--constraint       imposes a bandwidth <= exponent constraint\n"
 	    << "\t--exponent  float  fixes correlation exponent parameter\n"
-	    << "\t--mask   path/to/mask_img  ~~NOT IMPLEMENTED~~\n"
+	    << "\t--mask   path/to/mask_img  mask for input image\n"
 	    << "\t--output ofile/basename    output file for MCE summary data\n"
 	    << "\t--variance  float  fixes the marginal variance parameter\n"
 	    << "\t--xtol      float  set the numerical tolerance (default 1e-5)\n"
@@ -162,6 +162,24 @@ dualres::EstimRbfCommandParser<T>::EstimRbfCommandParser(int argc, char **argv) 
 	  _status = call_status::error;
 	}
       }
+      else if (arg == "--mask" || arg == "-m") {
+	if (i + 1 <= argc) {
+	  i++;
+	  _mask_file = argv[i];
+	  ifs.open(_mask_file, std::ifstream::in);
+	  if (!ifs.is_open()) {
+	    std::cerr << "\nCould not open " << _mask_file << "\n";
+	    _status = call_status::error;
+	  }
+	  else {
+	    ifs.close();
+	  }
+	}
+	else {
+	  std::cerr << "\nWarning: --mask option requires one argument\n";
+	  _status = call_status::error;
+	}
+      }
       else {
 	_image_file = argv[i];
 	ifs.open(_image_file, std::ifstream::in);
@@ -225,6 +243,13 @@ template< typename T >
 std::string dualres::EstimRbfCommandParser<T>::image_file() const {
   return _image_file;
 };
+
+
+template< typename T >
+std::string dualres::EstimRbfCommandParser<T>::mask_file() const {
+  return _mask_file;
+};
+
 
 template< typename T >
 std::string dualres::EstimRbfCommandParser<T>::output_file() const {

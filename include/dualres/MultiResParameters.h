@@ -70,7 +70,8 @@ namespace dualres {
     const ComplexVectorType& gradient(
       const typename dualres::MultiResData<scalar_type> &data
     );
-    const VectorType& mu() const;
+    const VectorType& mu() const;   // Re(mu) for data indices
+    const VectorType& mu_();        // Re(mu) for output mask indices
     
     const ComplexArrayType& lambda() const;
     const Eigen::VectorXi& data_indices() const;
@@ -82,6 +83,8 @@ namespace dualres {
     void add_data_to_mu(
       const typename dualres::MultiResData<scalar_type> &data
     );
+
+    void set_output_indices(const Eigen::MatrixXi &ijk);
 
     
   private:
@@ -98,12 +101,15 @@ namespace dualres {
 
     VectorType _real_mu;
     VectorType _real_sub_grad;
+
+    VectorType __mu_output;
     
 
     Eigen::Vector3i __image_grid_dims;  // dimensions of bounded image
     Eigen::Vector3i __lambda_grid_dims;
     
     Eigen::VectorXi __lambda_grid_indices;
+    Eigen::VectorXi __output_mask_indices;
 
     std::vector<int> _nonpositive_eigen_values;
     
@@ -233,7 +239,9 @@ dualres::MultiResParameters<T>::MultiResParameters(
         covariance_parameters[2], covariance_parameters[0]),
       0);
   }
-  __dft.forward(_lambda.data());
+  // __dft.forward(_lambda.data());
+  __dft.inverse(_lambda.data());
+  //
   _tau_sq_inv = 1 / covariance_parameters[0];
 
   // Get indices where real parts of eigen values are < 0
@@ -248,6 +256,7 @@ dualres::MultiResParameters<T>::MultiResParameters(
     
 
   std::cout << (_lambda.size() - _nonpositive_eigen_values.size())
+	    << "/" << (_lambda.size())
 	    << " eigen values have real-part > 0  ("
 	    << std::setprecision(2) << std::fixed
 	    << ( (1.0 - (double)_nonpositive_eigen_values.size() / _lambda.size())
@@ -261,6 +270,9 @@ dualres::MultiResParameters<T>::MultiResParameters(
   __lambda_grid_indices =
     ijk_yh.col(2) * __lambda_grid_dims[0] * __lambda_grid_dims[1] +
     ijk_yh.col(1) * __lambda_grid_dims[0] + ijk_yh.col(0);
+  
+  __output_mask_indices = __lambda_grid_indices;
+  __mu_output = VectorType::Zero(__output_mask_indices.size());
 
 
   _real_mu = VectorType::Zero(__lambda_grid_indices.size());
@@ -368,6 +380,15 @@ dualres::MultiResParameters<T>::mu() const {
 };
 
 
+
+
+template< typename T >
+const typename dualres::MultiResParameters<T>::VectorType&
+dualres::MultiResParameters<T>::mu_() {
+  __mu_output = dualres::nullary_index(_mu.matrix().real(),
+				__output_mask_indices);
+  return __mu_output;
+};
 
 
 template< typename T >
@@ -603,6 +624,30 @@ void dualres::MultiResParameters<T>::add_data_to_mu(
 };
 
 
+
+
+template< typename T >
+void dualres::MultiResParameters<T>::set_output_indices(
+  const Eigen::MatrixXi &ijk
+) {
+  if (ijk.cols() != 3) {
+    throw std::domain_error("MultiResParameters:set_output_indices NCOL");
+  }
+  const Eigen::Vector3i colmins_ = ijk.colwise().minCoeff();
+  const Eigen::Vector3i colmaxs_ = ijk.colwise().maxCoeff();
+  if ( (colmaxs_.array() > __lambda_grid_dims.array()).any() ) {
+    throw std::domain_error("MultiResParameters:set_output_indices MAX");
+  }
+  if ( (colmins_.array() < 0).any() ) {
+    throw std::domain_error("MultiResParameters:set_output_indices MIN");
+  }
+  __output_mask_indices.conservativeResize(ijk.rows());
+  __mu_output.conservativeResize(ijk.rows());
+  __output_mask_indices =
+    ijk.col(2) * __lambda_grid_dims[0] * __lambda_grid_dims[1] +
+    ijk.col(1) * __lambda_grid_dims[0] +
+    ijk.col(0);
+};
 
 
 

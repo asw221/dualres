@@ -25,7 +25,7 @@ make
  - [ ] Convenient interface to check proportion of positive eigen values
    for given kernel function/image space
  - [ ] Enhance comments and help pages
- - [ ] Add options & utilities for masking images
+ - [x] Add options & utilities for masking images
  - [ ] Would eventually like to write wrapping classes for `nifti_image`
    pointers and covariance parameters
 
@@ -34,16 +34,31 @@ make
 ### Analysis
 ```
 $ ./dualres/build/bin/dualgpmf \
-       --highres /path/to/highres.nii \  # Required. Image defines inference space
-       --stdhres /path/to/stdres.nii \   # Auxiliary data
+       --highres /path/to/highres.nii \  # REQUIRED. Image defines inference space
+       --stdres /path/to/stdres.nii \    # Auxiliary data
        --covariance 0.806 0.131966 1 \   # [partial sill, bandwidth, exponent]
-       --burnin 1000 \                   # MCMC burnin iterations
+       --output output_basename \        # Output file base name
+	   --hmask /path/to/hresmask.nii \   # Mask for highres image input
+	   --omask /path/to/outmask.nii \    # Optional output image mask
+       --smask /path/to/sresmask.nii \   # Mask for auxiliary image input
+	   --burnin 1000 \                   # MCMC burnin iterations
        --nsave 1000 \                    # MCMC iterations to save
-       --thin 4 \                        # MCMC thinning factor
+       --thin 3 \                        # MCMC thinning factor
        --leapfrog 25 \                   # HMC number of integrator steps
        --mhtarget 0.65 \                 # HMC target acceptance rate
        --neighborhood 6.9 \              # Kriging approximation extent (mm)
        --threads 6 \                     # Number of cores to use
-       --output output_basename \        # Output file base name
        --seed 8675309                    # URNG seed
 ```
+
+
+#### Estimation of radial basis parameters
+```
+$ ./dualres/build/bin/estimate_rbf \
+	   /path/to/input.nii \              # REQUIRED. Input image/data
+	   --mask /path/to/mask.nii \        # Mask for image input
+	   --exponent 1.5 \                  # Fixes the RBF exponent
+	   --xtol 1e-5                       # Set numerical tolerance
+```
+
+

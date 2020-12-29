@@ -11,6 +11,7 @@
 #include <stdexcept>
 #include <vector>
 
+#include "dualres/ansi.h"
 #include "dualres/CommandParser.h"
 #include "dualres/defines.h"
 #include "dualres/estimate_kernel_parameters.h"
@@ -88,13 +89,22 @@ int main(int argc, char *argv[]) {
 
   const std::string _OUTPUT_FILE_SAMPLES = inputs.output_file(
     "_samples.dat");
+  const std::string _OUTPUT_FILE_ACTIVATION = inputs.output_file(
+    "_posterior_activation.nii");
   const std::string _OUTPUT_FILE_MEAN = inputs.output_file(
     "_posterior_mean.nii");
   const std::string _OUTPUT_FILE_VARIANCE = inputs.output_file(
     "_posterior_variance.nii");
+  // const std::string _OUTPUT_FILE_ACTIVATION = inputs.output_file(
+  //   "_posterior_Pr(activation).nii");
+  const std::string _OUTPUT_FILE_RESIDUAL = inputs.output_file(
+    "_residual.nii");
   
-  nifti_image* _high_res_;
-  nifti_image* _std_res_;
+  ::nifti_image* _high_res_;
+  ::nifti_image* _std_res_;
+  ::nifti_image* _high_res_mask_;
+  ::nifti_image* _std_res_mask_;
+  ::nifti_image* _output_mask_;
   
   dualres::MultiResData<scalar_type> _data_;
   dualres::HMCParameters<scalar_type> _hmc_;
@@ -110,12 +120,37 @@ int main(int argc, char *argv[]) {
     ::remove(_OUTPUT_FILE_MEAN.c_str());
   if (_OUTPUT_FILE_VARIANCE != inputs.highres_file())
     ::remove(_OUTPUT_FILE_VARIANCE.c_str());
+  if (_OUTPUT_FILE_ACTIVATION != inputs.highres_file())
+    ::remove(_OUTPUT_FILE_ACTIVATION.c_str());
   
 
   try {
-    _high_res_ = nifti_image_read(inputs.highres_file().c_str(), 1);
+    _high_res_ = ::nifti_image_read(inputs.highres_file().c_str(), 1);
     std::cout << "High-resolution file: " << inputs.highres_file()
 	      << std::endl;
+
+    _high_res_mask_ = ::nifti_image_read(inputs.hmask_file().c_str(), 1);
+    _output_mask_ = ::nifti_image_read(inputs.omask_file().c_str(), 1);
+    if (dualres::same_orientation(_high_res_, _high_res_mask_) &&
+	(_high_res_->nvox == _high_res_mask_->nvox)) {
+      dualres::apply_mask(_high_res_, _high_res_mask_);
+      std::cout << "\t[Masked by: " << inputs.hmask_file() << "]"
+		<< std::endl;
+    }
+    else {
+      std::cerr << "  ***WARNING***  "
+	        << "High-resolution image/mask mismatch. "
+		<< "Image not masked"
+		<< std::endl;
+      throw std::domain_error("Improper mask");
+    }
+    if (!dualres::same_orientation(_high_res_, _output_mask_) ||
+	(_high_res_->nvox != _output_mask_->nvox)) {
+      std::cerr << "  ***WARNING***  "
+	        << "High-resolution/output mask mismatch."
+		<< std::endl;
+      throw std::domain_error("Improper mask");
+    }
     
 
     if (!mcmc_samples_stream) {
@@ -127,7 +162,7 @@ int main(int argc, char *argv[]) {
     
     
     if (_STANDARD_RESOLUTION_AVAILABLE) {
-      _std_res_ = nifti_image_read(inputs.stdres_file().c_str(), 1);
+      _std_res_ = ::nifti_image_read(inputs.stdres_file().c_str(), 1);
       std::cout << "Standard-resolution file: " << inputs.stdres_file()
 		<< std::endl;
     
@@ -139,6 +174,29 @@ int main(int argc, char *argv[]) {
 		     << " have different data types\n";
 	throw std::domain_error(error_stream.str());
       }
+
+
+      // Mask _std_res_ image if desired
+      if (!inputs.smask_file().empty()) {
+	
+	_std_res_mask_ = ::nifti_image_read(inputs.smask_file().c_str(), 1);
+	if (dualres::same_orientation(_std_res_, _std_res_mask_) &&
+	    ( _std_res_->nvox == _std_res_mask_->nvox )) {
+	  dualres::apply_mask(_std_res_, _std_res_mask_);
+	  std::cout << "\t[Masked by: " << inputs.smask_file() << "]"
+		    << std::endl;
+	}
+	else {
+	  std::cerr << "  ***WARNING***  "
+	            << "Standard-resolution image/mask mismatch. "
+	            << "Image not masked"
+		    << std::endl;
+	}
+	
+	::nifti_image_free(_std_res_mask_);
+	
+      } // if (!inputs.smask_file().empty())
+      
     
       // If covar parameters are not given, estimate them from inputs. Use
       // Std Res image first if available  
@@ -221,22 +279,30 @@ int main(int argc, char *argv[]) {
 
     
 
-    // Fit model
-    dualres::gaussian_process::sor_approx::mcmc_summary<scalar_type>
-      model_output = dualres::gaussian_process::sor_approx::fit_model
-      <scalar_type>(_high_res_, _data_, _hmc_, mcmc_samples_stream);
+    // --- Fit model -------------------------------------------------
+    dualres::add_to(_high_res_mask_, _output_mask_);
+    // ^^ Turns _high_res_mask_ into global overall mask
+    
+    dualres::gaussian_process::gpp_approx::mcmc_summary<scalar_type>
+      model_output = dualres::gaussian_process::gpp_approx::fit_model
+      <scalar_type>(_high_res_, _high_res_mask_, _output_mask_,
+		    _data_, _hmc_, mcmc_samples_stream);
 
     mcmc_samples_stream.close();
-    std::cout << _OUTPUT_FILE_SAMPLES << " written\n";
+    std::cout << ansi::foreground_cyan
+	      << _OUTPUT_FILE_SAMPLES << " written\n"
+	      << ansi::reset;
 
-    // Write output
+    // --- Write output ----------------------------------------------
     // Posterior mean:
-    ::nifti_set_filenames(_high_res_, _OUTPUT_FILE_MEAN.c_str(), 1, 1);
-    if (std::string(_high_res_->fname) != inputs.highres_file()) {
-      dualres::emplace_nonzero_data(_high_res_, model_output.mode_mu());
+    ::nifti_set_filenames(_output_mask_, _OUTPUT_FILE_MEAN.c_str(), 1, 1);
+    if (std::string(_output_mask_->fname) != inputs.highres_file()) {
+      dualres::emplace_nonzero_data(_output_mask_, model_output.mode_mu());
       
-      ::nifti_image_write(_high_res_);
-      std::cout << _OUTPUT_FILE_MEAN << " written\n";
+      ::nifti_image_write(_output_mask_);
+      std::cout << ansi::foreground_cyan
+		<< _OUTPUT_FILE_MEAN << " written\n"
+		<< ansi::reset;
     }
     else {
       error_stream << "Warning: posterior mean image would overwrite data. "
@@ -245,12 +311,53 @@ int main(int argc, char *argv[]) {
     }
     
     // Posterior variance:
-    ::nifti_set_filenames(_high_res_, _OUTPUT_FILE_VARIANCE.c_str(), 1, 1);
-    if (std::string(_high_res_->fname) != inputs.highres_file()) {
-      dualres::emplace_nonzero_data(_high_res_, model_output.var_mu());
+    ::nifti_set_filenames(_output_mask_, _OUTPUT_FILE_VARIANCE.c_str(), 1, 1);
+    if (std::string(_output_mask_->fname) != inputs.highres_file()) {
+      dualres::emplace_nonzero_data(_output_mask_, model_output.var_mu());
       
-      ::nifti_image_write(_high_res_);
-      std::cout << _OUTPUT_FILE_VARIANCE << " written\n";
+      ::nifti_image_write(_output_mask_);
+      std::cout << ansi::foreground_cyan
+		<< _OUTPUT_FILE_VARIANCE << " written\n"
+		<< ansi::reset;
+    }
+    else {
+      error_stream << "Warning: posterior variance image would overwrite data. "
+		   << "File not written\n";
+      std::cerr << error_stream.str();
+    }
+
+    
+    // Activation image:
+    //   (Derived from loss/risk function)
+    ::nifti_set_filenames(_output_mask_, _OUTPUT_FILE_ACTIVATION.c_str(), 1, 1);
+    if (std::string(_output_mask_->fname) != inputs.highres_file()) {
+      dualres::emplace_nonzero_data(_output_mask_, model_output.activation() );
+      
+      ::nifti_image_write(_output_mask_);
+      std::cout << ansi::foreground_cyan
+		<< _OUTPUT_FILE_RESIDUAL << " written\n"
+		<< ansi::reset;
+    }
+    else {
+      error_stream << "Warning: posterior activation image would overwrite data. "
+		   << "File not written\n";
+      std::cerr << error_stream.str();
+    }
+
+
+    
+    // Residual image:
+    ::nifti_set_filenames(_output_mask_, _OUTPUT_FILE_RESIDUAL.c_str(), 1, 1);
+    if (std::string(_output_mask_->fname) != inputs.highres_file()) {
+      dualres::emplace_nonzero_data(_output_mask_,
+        (-model_output.mode_mu()).eval() );
+      dualres::apply_mask(_high_res_, _output_mask_);
+      dualres::add_to(_output_mask_, _high_res_);
+      
+      ::nifti_image_write(_output_mask_);
+      std::cout << ansi::foreground_cyan
+		<< _OUTPUT_FILE_RESIDUAL << " written\n"
+		<< ansi::reset;
     }
     else {
       error_stream << "Warning: posterior variance image would overwrite data. "
@@ -280,16 +387,20 @@ int main(int argc, char *argv[]) {
 
     // 
     ::nifti_image_free(_high_res_);
+    ::nifti_image_free(_high_res_mask_);
+    ::nifti_image_free(_output_mask_);
   }  // try ...
   catch (const std::exception &__err) {
     error_status = true;
-    std::cerr << "Exception caught with message:\n'"
+    std::cerr << ansi::foreground_bold_magenta
+	      << "\nException caught with message:\n'"
 	      << __err.what() << "'\n"
-	      << std::endl;
+	      << ansi::reset << std::endl;
   }
   catch (...) {
     error_status = true;
-    std::cerr << "Unknown error\n";
+    std::cerr << ansi::foreground_bold_magenta
+	      << "\nUnknown error\n" << ansi::reset;
   }
 
 

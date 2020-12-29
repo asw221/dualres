@@ -9,6 +9,7 @@
 #include <stdexcept>
 #include <vector>
 
+#include "dualres/ansi.h"
 #include "dualres/CommandParser.h"
 #include "dualres/estimate_kernel_parameters.h"
 #include "dualres/kernels.h"
@@ -23,12 +24,23 @@ int main(int argc, char *argv[]) {
     return 0;
 
   ::nifti_image* __nii;
+  ::nifti_image* __mask;
   dualres::mce_data mce;
   // Eigen::Vector3d _grad;
   // Eigen::Matrix3d _Cov_approx;
   // Eigen::Matrix3d Hessian;
   try {
     __nii = dualres::nifti_image_read(inputs.image_file(), 1);
+    if (!inputs.mask_file().empty()) {
+      __mask = dualres::nifti_image_read(inputs.mask_file(), 1);
+      if (!dualres::same_orientation(__nii, __mask)) {
+	throw std::domain_error("Error: Image/mask orientation mismatch");
+      }
+      else {
+	dualres::apply_mask(__nii, __mask);
+	::nifti_image_free(__mask);
+      }
+    }
     std::cout << "Computing covariances across the image... " << std::flush;
   
     // Extract covariance/distance summary data
@@ -37,6 +49,14 @@ int main(int argc, char *argv[]) {
 
     // Cleanup
     ::nifti_image_free(__nii);
+  }
+  catch (const std::exception &__err) {
+    std::cerr << ansi::foreground_bold_magenta
+	      << "Exception caught with message:\n"
+	      << ansi::reset << "'"
+	      << __err.what() << "'\n"
+	      << ansi::reset << std::endl;
+    return 1;
   }
   catch (...) {
     std::cerr << "Error computing minimum contrast data from file:\n\t"
@@ -130,14 +150,18 @@ int main(int argc, char *argv[]) {
   }
   catch (const std::exception &__err) {
     std::cerr << "\n"
-	      << "Exception caught with message:\n'"
+	      << ansi::foreground_bold_magenta
+	      << "Exception caught with message:\n"
+	      << ansi::reset << "'"
 	      << __err.what() << "'\n"
 	      << std::endl;
     return 1;
   }
   catch (...) {
     std::cerr << "\n"
+	      << ansi::foreground_bold_magenta
 	      << "Error: unable to estimate covariance parameters "
+	      << ansi::reset
 	      << "(unknown cause)"
 	      << std::endl;
     return 1;

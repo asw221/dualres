@@ -57,8 +57,11 @@ namespace dualres {
     scalar_type mcmc_mhtarget() const;
     scalar_type neighborhood() const;
     std::string highres_file() const;
+    std::string hmask_file() const;
+    std::string omask_file() const;
     std::string output_file_base() const;
     std::string output_file(const std::string &extension) const;
+    std::string smask_file() const;
     std::string stdres_file() const;
     unsigned int seed() const;
     typename std::vector<scalar_type> covariance_parameters() const;
@@ -79,7 +82,10 @@ namespace dualres {
     scalar_type _mcmc_mhtarget;
     scalar_type _neighborhood;
     std::string _highres_file;
+    std::string _hmask_file;
+    std::string _omask_file;
     std::string _output_base;
+    std::string _smask_file;
     std::string _stdres_file;
     unsigned int _seed;
     std::vector<scalar_type> _covariance_params;
@@ -101,6 +107,7 @@ namespace dualres {
     bool operator!() const;
     double xtol_rel() const;
     std::string image_file() const;
+    std::string mask_file() const;
     std::string output_file() const;
     scalar_type parameter(const int which) const;
     bool parameter_fixed(const int which) const;
@@ -116,6 +123,7 @@ namespace dualres {
     bool _use_constraint;
     double _xtol;
     std::string _image_file;
+    std::string _mask_file;
     std::string _output_file;
     std::vector<scalar_type> _kernel_params;
   };

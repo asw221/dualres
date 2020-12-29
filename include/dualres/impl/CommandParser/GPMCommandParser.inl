@@ -30,9 +30,12 @@ void dualres::GPMCommandParser<T>::show_help() const {
 	    << "\t--leapfrog     int        number of MCMC integrator steps\n"
 	    << "\t--mhtarget     float      target metropolis hastings rate\n"
 	    << "\t--monitor                 monitor MCMC iterations (debugging)\n"
+	    << "\t--hmask    path/to/mask   mask image for --highres input\n"
 	    << "\t--neighborhood float      n'hood size (mm) for kriging approx\n"
 	    << "\t--nsave        int        MCMC samples to save in output\n"
+	    << "\t--omask    path/to/mask   mask image to define ouptut space\n"
 	    << "\t--output   file/basename  path prefix for output files\n"
+	    << "\t--smask    path/to/mask   mask image for --stdres input\n"
 	    << "\t--seed         int        RNG seed\n"
 	    << "\t--stdres   path/to/img2   \n"
 	    << "\t--theta                   alias for --covariance\n"
@@ -41,6 +44,12 @@ void dualres::GPMCommandParser<T>::show_help() const {
 	    << "\n"
 	    << "img[1-2] are valid NIfTI files and f[1-3] are parameters "
 	    << "of an exponential radial covariance function."
+	    << "\n"
+	    << "[h,s,o]mask are valid NIfTI files used to define masks "
+	    << "for the high/base resolution image file, the "
+	    << "standard/secondary resolution image file, and an output "
+	    << "ROI, respectively. All will default to implicit image "
+	    << "masks if not specified."
 	    << "\n\n";
 };
 
@@ -62,9 +71,9 @@ dualres::GPMCommandParser<T>::GPMCommandParser(int argc, char* argv[]) {
   // Default values --------------------------------------------------
   _neighborhood = -1;
   _mcmc_burnin = 1000;
-  _mcmc_leapfrog_steps = 10;
+  _mcmc_leapfrog_steps = 25;
   _mcmc_nsave = 1000;
-  _mcmc_thin = 1;
+  _mcmc_thin = 3;
   _mcmc_mhtarget = 0.65;
   _monitor = false;
   _seed = static_cast<unsigned int>(
@@ -168,6 +177,21 @@ dualres::GPMCommandParser<T>::GPMCommandParser(int argc, char* argv[]) {
 	  _status = call_status::error;
 	}
       }
+      else if (arg == "--hmask" || arg == "-hm") {
+	if (i + 1 < argc) {  // make sure not at end of argv
+	  i++;
+	  _hmask_file = argv[i];
+	  if (!dualres::is_nifti_file(_hmask_file)) {
+	    std::cerr << _MESSAGE_NOT_NIFTI_FILE << "\t" << _hmask_file
+		      << std::endl;
+	    _status = call_status::error;
+	  }
+	}
+	else {
+	  std::cerr << "\nWarning: --hmask option requires one argument\n";
+	  _status = call_status::error;
+	}
+      }
       else if (arg == "--leapfrog" || arg == "-L") {
 	if (i + 1 < argc) {
 	  i++;
@@ -247,6 +271,21 @@ dualres::GPMCommandParser<T>::GPMCommandParser(int argc, char* argv[]) {
 	  _status = call_status::error;
 	}
       }
+      else if (arg == "--omask" || arg == "-om") {
+	if (i + 1 < argc) {  // make sure not at end of argv
+	  i++;
+	  _omask_file = argv[i];
+	  if (!dualres::is_nifti_file(_omask_file)) {
+	    std::cerr << _MESSAGE_NOT_NIFTI_FILE << "\t" << _omask_file
+		      << std::endl;
+	    _status = call_status::error;
+	  }
+	}
+	else {
+	  std::cerr << "\nWarning: --omask option requires one argument\n";
+	  _status = call_status::error;
+	}
+      }
       else if (arg == "--seed") {
 	if (i + 1 < argc) {
 	  i++;
@@ -260,6 +299,21 @@ dualres::GPMCommandParser<T>::GPMCommandParser(int argc, char* argv[]) {
 	}
 	else {
 	  std::cerr << _MESSAGE_IMPROPER_SEED;
+	  _status = call_status::error;
+	}
+      }
+      else if (arg == "--smask" || arg == "-sm") {
+	if (i + 1 < argc) {  // make sure not at end of argv
+	  i++;
+	  _smask_file = argv[i];
+	  if (!dualres::is_nifti_file(_smask_file)) {
+	    std::cerr << _MESSAGE_NOT_NIFTI_FILE << "\t" << _smask_file
+		      << std::endl;
+	    _status = call_status::error;
+	  }
+	}
+	else {
+	  std::cerr << "\nWarning: --smask option requires one argument\n";
 	  _status = call_status::error;
 	}
       }
@@ -327,6 +381,15 @@ dualres::GPMCommandParser<T>::GPMCommandParser(int argc, char* argv[]) {
     std::cerr << "\nError: User must supply the --highres argument\n";
     _status = call_status::error;
   }
+  if (_hmask_file.empty()) {
+    _hmask_file = _highres_file;
+  }
+  // if (_smask_file.empty() && !_stdres_file.empty()) {
+  //   _smask_file = _stdres_file;
+  // }
+  if (_omask_file.empty()) {
+    _omask_file = _highres_file;
+  }
   if (error()) {
     show_usage();
     std::cerr << "\nSee dualgpm --help for more information\n";
@@ -382,6 +445,25 @@ template< typename T >
 std::string dualres::GPMCommandParser<T>::highres_file() const {
   return _highres_file;
 };
+
+
+template< typename T >
+std::string dualres::GPMCommandParser<T>::hmask_file() const {
+  return _hmask_file;
+};
+
+
+template< typename T >
+std::string dualres::GPMCommandParser<T>::omask_file() const {
+  return _omask_file;
+};
+
+
+template< typename T >
+std::string dualres::GPMCommandParser<T>::smask_file() const {
+  return _smask_file;
+};
+
 
 template< typename T >
 std::string dualres::GPMCommandParser<T>::output_file_base() const {

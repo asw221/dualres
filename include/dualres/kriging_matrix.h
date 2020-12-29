@@ -95,7 +95,8 @@ namespace dualres {
 		<< "% of perturbations outside radius "
 		<< radius << std::endl;
       if (within_radius_count == 0)
-	throw std::logic_error("neighborhood_perturbation: no perturbations within radius");
+	throw std::logic_error(
+          "neighborhood_perturbation: no perturbations within radius");
     }
     Eigen::MatrixXi Psub(within_radius_count, 3);
     for (int i = 0; i < within_radius_count; i++) {

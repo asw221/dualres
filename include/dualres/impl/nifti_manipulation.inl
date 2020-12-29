@@ -7,9 +7,114 @@
 #include <vector>
 
 #include "dualres/defines.h"
+#include "dualres/eigen_slicing.h"
 #include "dualres/utilities.h"
 
 
+
+
+
+
+// --- A -------------------------------------------------------------
+
+void dualres::add_to(
+  ::nifti_image* first_img,
+  const ::nifti_image* const second_img
+) {
+  if (!dualres::same_orientation(first_img, second_img)) {
+    throw std::domain_error(
+      "Image math does not make sense: different orientations");
+  }
+  if (first_img->nvox != second_img->nvox) {
+    throw std::domain_error(
+      "Image math does not make sense: different grid sizes");
+  }
+  if (dualres::is_float(first_img) &&
+      dualres::is_float(second_img)) {
+    dualres::add_to_impl<>(first_img, second_img);
+  }
+  else if (dualres::is_double(first_img) &&
+	   dualres::is_double(second_img)) {
+    dualres::add_to_impl<double>(first_img, second_img);
+  }
+  else {
+    throw std::domain_error("Image math not implemented: datatype");
+  }
+};
+
+
+
+template< typename ImageType >
+void dualres::add_to_impl(
+  ::nifti_image* const A,
+  const ::nifti_image* const B
+) {
+  // A <- A + B
+  ImageType* A_data = (ImageType*)A->data;
+  ImageType* B_data = (ImageType*)B->data;
+  for (int i = 0; i < A->nvox; i++, ++A_data, ++B_data) {
+    (*A_data) += (*B_data);
+  }
+};
+
+
+
+
+
+
+
+
+void dualres::apply_mask(
+  ::nifti_image* const img,
+  const ::nifti_image* const mask
+) {
+  if (!dualres::same_orientation(img, mask)) {
+    throw std::domain_error(
+      "Image masking does not make sense: different orientations");
+  }
+  if (img->nvox != mask->nvox) {
+    throw std::domain_error(
+      "Image masking does not make sense: different grid sizes");
+  }
+  if (dualres::is_float(img) && dualres::is_float(mask)) {
+    dualres::apply_mask_impl<>(img, mask);
+  }
+  else if (dualres::is_float(img) && dualres::is_double(mask)) {
+    dualres::apply_mask_impl<float, double>(img, mask);
+  }
+  else if (dualres::is_float(img) && dualres::is_int(mask)) {
+    dualres::apply_mask_impl<float, int>(img, mask);
+  }
+  else if (dualres::is_double(img) && dualres::is_double(mask)) {
+    dualres::apply_mask_impl<double, double>(img, mask);
+  }
+  else if (dualres::is_double(img) && dualres::is_float(mask)) {
+    dualres::apply_mask_impl<double, float>(img, mask);
+  }
+  else if (dualres::is_double(img) && dualres::is_int(mask)) {
+    dualres::apply_mask_impl<double, int>(img, mask);
+  }
+  else {
+    throw std::domain_error("Image masking not implemented: datatype");
+  }
+};
+
+
+
+
+template< typename ImageType, typename MaskType >
+void dualres::apply_mask_impl(
+  ::nifti_image* const img,
+  const ::nifti_image* const mask
+) {
+  ImageType * img_ptr = (ImageType*)img->data;
+  MaskType * mask_ptr = (MaskType*)mask->data;
+  for (int i = 0; i < img->nvox; i++, ++img_ptr, ++mask_ptr) {
+    if ((*mask_ptr) == (MaskType)0  ||  isnan(*img_ptr)) {
+      (*img_ptr) = (ImageType)0;
+    }
+  }
+};
 
 
 
@@ -260,6 +365,54 @@ Eigen::MatrixXi dualres::get_nonzero_indices_bounded(
 
 
 
+Eigen::MatrixXi dualres::get_nonzero_indices_bounded_by_box(
+  const ::nifti_image* const nii,
+  const dualres::nifti_bounding_box& bbox
+) {
+  Eigen::MatrixXi ijk = dualres::get_nonzero_indices(nii);
+  Eigen::VectorXi in_box(ijk.rows());
+  const Eigen::VectorXi all_cols_ =
+    Eigen::VectorXi::LinSpaced(ijk.cols(), 0, ijk.cols() - 1);
+  int n = 0;
+  bool row_ok;
+  for (int i = 0; i < ijk.rows(); i++) {
+    row_ok = (ijk.row(i).transpose().array() >= bbox.ijk_min.array()).all() &&
+      (ijk.row(i).transpose().array() <= bbox.ijk_max.array()).all();
+    if (row_ok) {
+      ijk.row(i) -= bbox.ijk_min;
+      in_box[n] = i;
+      n++;
+    }
+  }
+  in_box.conservativeResize(n);
+  return dualres::nullary_index(ijk, in_box, all_cols_);
+};
+
+
+
+
+
+
+
+Eigen::MatrixXi dualres::get_nonzero_indices_bounded_by_mask(
+  const ::nifti_image* const nii,
+  const ::nifti_image* const mask
+) {
+  if (!dualres::same_orientation(nii, mask)) {
+    throw std::domain_error(
+      "Bounded masking does not make sense: different orientations");
+  }
+  if (nii->nvox != mask->nvox) {
+    throw std::domain_error(
+      "Bounded masking does not make sense: different grid sizes");
+  }
+  dualres::nifti_bounding_box bbmask = dualres::get_bounding_box(mask);
+  return dualres::get_nonzero_indices_bounded_by_box(nii, bbmask);
+};
+
+
+
+
   
 
 
@@ -282,6 +435,14 @@ bool dualres::is_float(const ::nifti_image* const nii) {
 };
 
 
+bool dualres::is_int(const ::nifti_image* const nii) {
+  return dualres::nii_data_type(nii) ==
+    dualres::nifti_data_type::INT;
+};
+
+
+
+
 bool dualres::is_nifti_file(const std::string &fname) {
   // ::is_nifti_file defined in nifti1_io.h
   const dualres::path _initial_path = dualres::current_path();
@@ -294,6 +455,14 @@ bool dualres::is_nifti_file(const std::string &fname) {
   }
   return is_nifti;
 };
+
+
+
+bool dualres::is_unknown_datatype(const ::nifti_image* const nii) {
+  return dualres::nii_data_type(nii) ==
+    dualres::nifti_data_type::OTHER;
+};
+
 
 
 
@@ -336,7 +505,7 @@ void dualres::nifti_image_write(
   }
   dualres::path hpath(new_filename);
   dualres::current_path(hpath.parent_path());
-  remove(hpath.c_str());
+  remove(hpath.filename().c_str());
   ::nifti_set_filenames(nii, hpath.filename().c_str(), 1, 1);
   ::nifti_image_write(nii);
   dualres::current_path(_initial_path);
@@ -387,6 +556,19 @@ bool dualres::same_data_types(
 	  (first_img->datatype) ==
 	  static_cast<dualres::nifti_data_type>
 	  (second_img->datatype));
+};
+
+
+
+bool dualres::same_orientation(
+  const ::nifti_image* const first_img,
+  const ::nifti_image* const second_img,
+  const float tol
+) {
+  const float m = ( dualres::qform_matrix(first_img) -
+		    dualres::qform_matrix(second_img) )
+    .cwiseAbs().maxCoeff();
+  return ( m <= tol );
 };
 
 

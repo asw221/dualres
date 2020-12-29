@@ -22,6 +22,8 @@ add_subdirectory(src)
 if (APPLE)
    set(CMAKE_C_COMPILER clang)
    set(CMAKE_CXX_COMPILER clang++)
+
+   set(CMAKE_OSX_ARCHITECTURES "arm64;x86_64" CACHE STRING "")
    
    if(CMAKE_C_COMPILER_ID MATCHES "Clang\$")
         set(OpenMP_C "${CMAKE_C_COMPILER}")

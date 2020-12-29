@@ -55,3 +55,7 @@ rbf_neighborhood: $(SRCDIR)/rbf_neighborhood.cpp
 
 simulate_data_from_image: $(SRCDIR)/simulate_data_from_image.cpp
 	$(CXX) $< $(CXXFLAGS) $(INC) $(LIB) -o $(EXECDIR)/simulate_data_from_image
+
+
+write_kriging_matrix: $(SRCDIR)/write_kriging_matrix.cpp
+	$(CXX) $< $(CXXFLAGS) $(INC) $(LIB) -o $(EXECDIR)/write_kriging_matrix

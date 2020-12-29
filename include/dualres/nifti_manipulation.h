@@ -51,6 +51,22 @@ namespace dualres {
   // === Function definitions ========================================
 
 
+  // --- A -----------------------------------------------------------
+
+  void add_to(
+    ::nifti_image* first_img,
+    const ::nifti_image* second_img
+  );
+
+
+  void apply_mask(
+    ::nifti_image* const img,
+    const ::nifti_image* const mask
+  );
+
+  
+  
+
   // --- C -----------------------------------------------------------
 
   int count_nonzero_voxels(const ::nifti_image* const nii);
@@ -85,7 +101,18 @@ namespace dualres {
 
   
   Eigen::MatrixXi get_nonzero_indices_bounded(const ::nifti_image* const nii);
+
+
+  Eigen::MatrixXi get_nonzero_indices_bounded_by_box(
+    const ::nifti_image* const nii,
+    const dualres::nifti_bounding_box& bbox
+  );
   
+
+  Eigen::MatrixXi get_nonzero_indices_bounded_by_mask(
+    const ::nifti_image* const nii,
+    const ::nifti_image* const mask
+  );
 
 
   
@@ -96,8 +123,14 @@ namespace dualres {
 
   bool is_float(const ::nifti_image* const nii);
 
+  
+  bool is_int(const ::nifti_image* const nii);
+
 
   bool is_nifti_file(const std::string &fname);
+
+  
+  bool is_unknown_datatype(const ::nifti_image* const nii);
 
 
 
@@ -152,6 +185,13 @@ namespace dualres {
   );
 
 
+  bool same_orientation(
+    const ::nifti_image* const first_img,
+    const ::nifti_image* const second_img,
+    const float tol = 1e-4
+  );
+
+
   
   // --- V -----------------------------------------------------------
   
@@ -166,6 +206,21 @@ namespace dualres {
 
   
   /// @cond IMPL
+
+  template< typename ImageType = float >
+  void add_to_impl(
+    ::nifti_image* const A,
+    const ::nifti_image* const B
+  );
+
+
+  template< typename ImageType = float, typename MaskType = float >
+  void apply_mask_impl(
+    ::nifti_image* const img,
+    const ::nifti_image* const mask
+  );
+  
+  
   /*
    * Implementation of \c dualres::emplace_nonzero_data
    */
