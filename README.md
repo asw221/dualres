@@ -34,21 +34,21 @@ make
 ### Analysis
 ```
 $ ./dualres/build/bin/dualgpmf \
-       --highres /path/to/highres.nii \  # REQUIRED. Image defines inference space
-       --stdres /path/to/stdres.nii \    # Auxiliary data
-       --covariance 0.806 0.131966 1 \   # [partial sill, bandwidth, exponent]
-       --output output_basename \        # Output file base name
-	   --hmask /path/to/hresmask.nii \   # Mask for highres image input
-	   --omask /path/to/outmask.nii \    # Optional output image mask
-       --smask /path/to/sresmask.nii \   # Mask for auxiliary image input
-	   --burnin 1000 \                   # MCMC burnin iterations
-       --nsave 1000 \                    # MCMC iterations to save
-       --thin 3 \                        # MCMC thinning factor
-       --leapfrog 25 \                   # HMC number of integrator steps
-       --mhtarget 0.65 \                 # HMC target acceptance rate
-       --neighborhood 6.9 \              # Kriging approximation extent (mm)
-       --threads 6 \                     # Number of cores to use
-       --seed 8675309                    # URNG seed
+	--highres /path/to/highres.nii \  # REQUIRED. Image defines inference space
+	--stdres /path/to/stdres.nii \    # Auxiliary data
+	--covariance 0.806 0.131966 1 \   # [partial sill, bandwidth, exponent]
+	--output output_basename \        # Output file base name
+	--hmask /path/to/hresmask.nii \   # Mask for highres image input
+	--omask /path/to/outmask.nii \    # Optional output image mask
+	--smask /path/to/sresmask.nii \   # Mask for auxiliary image input
+	--burnin 1000 \                   # MCMC burnin iterations
+	--nsave 1000 \                    # MCMC iterations to save
+	--thin 3 \                        # MCMC thinning factor
+	--leapfrog 25 \                   # HMC number of integrator steps
+	--mhtarget 0.65 \                 # HMC target acceptance rate
+	--neighborhood 6.9 \              # Kriging approximation extent (mm)
+	--threads 6 \                     # Number of cores to use
+	--seed 8675309                    # URNG seed
 ```
 
 
