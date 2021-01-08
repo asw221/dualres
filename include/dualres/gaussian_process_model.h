@@ -1,4 +1,5 @@
 
+#include <algorithm>
 #include <chrono>
 #include <Eigen/Core>
 #include <fstream>
@@ -74,6 +75,7 @@ namespace dualres {
 	scalar_type _metropolis_hastings_rate;
 	scalar_type _sampling_time;
 	VectorType _first_moment_mu;
+	VectorType _first_moment_abs_mu_M;
 	VectorType _second_moment_mu;
 	std::vector<scalar_type> _sigma;
       };
@@ -135,20 +137,29 @@ namespace dualres {
 	      start = std::chrono::high_resolution_clock::now();
 	    // save stuff ...
 	    mu = _theta_.mu_();
-	    // _output_stream_ << mu.transpose() << " ";
-	    for (int i = 0; i < mu.size(); i++)
-	      _output_stream_ << mu.coeffRef(i) << "\t";
 	    for (int i = 0; i < _data_.n_datasets(); i++) {
 	      sigma[i] = _theta_.sigma(i);
-	      _output_stream_ << sigma[i] << "\t";
 	    }
 	    log_lik = _theta_.log_likelihood(_data_);
-	    _output_stream_ << _theta_.tau() << "\t";
-	    _output_stream_ << log_lik;
-	    if (save_count < (_hmc_.n_save() - 1))
-	      _output_stream_ << std::endl;
-
 	    posterior_summary.update(mu, sigma, log_lik);
+	    // _output_stream_ << mu.transpose() << " ";
+	    
+	    if (dualres::output_samples()) {
+	      
+	      for (int i = 0; i < mu.size(); i++) {
+		_output_stream_ << mu.coeffRef(i) << "\t";
+	      }
+	      for (int i = 0; i < _data_.n_datasets(); i++) {
+		_output_stream_ << sigma[i] << "\t";
+	      }
+	      _output_stream_ << _theta_.tau() << "\t";
+	      _output_stream_ << log_lik;
+	      if (save_count < (_hmc_.n_save() - 1)) {
+		_output_stream_ << std::endl;
+	      }
+	      
+	    }
+	    
 	    save_count++;
 	  }
 	  if (!dualres::monitor_simulations()) {
@@ -185,6 +196,7 @@ dualres::gaussian_process::gpp_approx::mcmc_summary<T>::mcmc_summary(
   _metropolis_hastings_rate = 0;
   _sampling_time = 0;
   _first_moment_mu = VectorType::Zero(size_mu);
+  _first_moment_abs_mu_M = VectorType::Zero(size_mu);
   _second_moment_mu = VectorType::Zero(size_mu);
   _sigma = std::vector<scalar_type>(size_sigma, 0);	
 };
@@ -204,6 +216,8 @@ void dualres::gaussian_process::gpp_approx::mcmc_summary<T>::update(
   if (_sigma.size() != sigma.size())
     throw std::domain_error("sigma dimension mismatch");
   _first_moment_mu += mu;
+  _first_moment_abs_mu_M += mu.cwiseAbs() /
+    std::max(mu.cwiseAbs().maxCoeff(), (scalar_type)1e-6);
   _second_moment_mu += (mu.array() * mu.array()).matrix();
   for (int i = 0; i < (int)_sigma.size(); i++) {
     _sigma[i] += sigma[i];
@@ -260,7 +274,8 @@ template< typename T >
 typename dualres::gaussian_process::gpp_approx::mcmc_summary<T>::VectorType
 dualres::gaussian_process::gpp_approx::mcmc_summary<T>::activation() const {
   const VectorType m =
-    ( mode_mu().array().abs() / var_mu().array().sqrt() ).matrix();
+    ( _first_moment_abs_mu_M.array() /
+      (samples() * var_mu().array().sqrt()) ).matrix();
   const scalar_type M = m.maxCoeff();
   return ( m / M );
 };

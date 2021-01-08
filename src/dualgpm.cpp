@@ -115,7 +115,10 @@ int main(int argc, char *argv[]) {
   std::ostringstream error_stream;
 
   
-  std::ofstream mcmc_samples_stream(_OUTPUT_FILE_SAMPLES.c_str());
+  std::ofstream mcmc_samples_stream;
+  if (dualres::output_samples()) {
+    mcmc_samples_stream.open(_OUTPUT_FILE_SAMPLES.c_str());
+  }
   if (_OUTPUT_FILE_MEAN != inputs.highres_file())
     ::remove(_OUTPUT_FILE_MEAN.c_str());
   if (_OUTPUT_FILE_VARIANCE != inputs.highres_file())
@@ -153,10 +156,10 @@ int main(int argc, char *argv[]) {
     }
     
 
-    if (!mcmc_samples_stream) {
+    if (dualres::output_samples() && !mcmc_samples_stream) {
       error_status = true;
       error_stream << "Error: will not be able to write output to\n  "
-		   << _OUTPUT_FILE_MEAN;
+		   << _OUTPUT_FILE_SAMPLES;
       throw std::runtime_error(error_stream.str());
     }
     
@@ -253,7 +256,8 @@ int main(int argc, char *argv[]) {
       inputs.mcmc_mhtarget()
       );
     dualres::set_monitor_simulations(inputs.monitor());
-      
+    dualres::set_output_mcmc_samples(inputs.output_samples());
+    
     std::cout << "\nMCMC settings:"
 	      << "\n-----------------"
 	      << "\nBurnin   = " << inputs.mcmc_burnin()
@@ -288,7 +292,9 @@ int main(int argc, char *argv[]) {
       <scalar_type>(_high_res_, _high_res_mask_, _output_mask_,
 		    _data_, _hmc_, mcmc_samples_stream);
 
-    mcmc_samples_stream.close();
+    if (mcmc_samples_stream.is_open()) {
+      mcmc_samples_stream.close();
+    }
     std::cout << ansi::foreground_cyan
 	      << _OUTPUT_FILE_SAMPLES << " written\n"
 	      << ansi::reset;
@@ -353,6 +359,7 @@ int main(int argc, char *argv[]) {
         (-model_output.mode_mu()).eval() );
       dualres::apply_mask(_high_res_, _output_mask_);
       dualres::add_to(_output_mask_, _high_res_);
+      dualres::apply_mask(_output_mask_, _high_res_);
       
       ::nifti_image_write(_output_mask_);
       std::cout << ansi::foreground_cyan
@@ -370,18 +377,21 @@ int main(int argc, char *argv[]) {
 	      << "Metropolis-Hastings rate was "
 	      << (model_output.metropolis_hastings_rate() * 100)
 	      << "%\n" << std::endl;
-    
-    // For simulations: write MH rate and sampling time to 'stats' file
-    mcmc_samples_stream.open(inputs.output_file("_stats.csv"));
-    if (mcmc_samples_stream.is_open()) {
-      mcmc_samples_stream << "MHrate,SamplingTime,StepSize\n"
-			  << model_output.metropolis_hastings_rate()
-			  << ","
-			  << model_output.sampling_time()
-			  << ","
-			  << _hmc_.eps_value()
-			  << "\n";
-      mcmc_samples_stream.close();
+
+
+    if (dualres::output_samples()) {
+      // For simulations: write MH rate and sampling time to 'stats' file
+      mcmc_samples_stream.open(inputs.output_file("_stats.csv"));
+      if (mcmc_samples_stream.is_open()) {
+	mcmc_samples_stream << "MHrate,SamplingTime,StepSize\n"
+			    << model_output.metropolis_hastings_rate()
+			    << ","
+			    << model_output.sampling_time()
+			    << ","
+			    << _hmc_.eps_value()
+			    << "\n";
+	mcmc_samples_stream.close();
+      }
     }
     
 

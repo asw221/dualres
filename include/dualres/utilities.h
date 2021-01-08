@@ -32,8 +32,16 @@ namespace dualres {
     dualres::__internals::_MONITOR_ = monitor;
   };
 
+  void set_output_mcmc_samples(const bool output_samples) {
+    dualres::__internals::_OUTPUT_SAMPLES_ = output_samples;
+  };
+
   bool monitor_simulations() {
     return dualres::__internals::_MONITOR_;
+  };
+
+  bool output_samples() {
+    return dualres::__internals::_OUTPUT_SAMPLES_;
   };
   
 

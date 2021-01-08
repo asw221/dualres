@@ -52,7 +52,7 @@ void dualres::add_to_impl(
   // A <- A + B
   ImageType* A_data = (ImageType*)A->data;
   ImageType* B_data = (ImageType*)B->data;
-  for (int i = 0; i < A->nvox; i++, ++A_data, ++B_data) {
+  for (int i = 0; i < (int)A->nvox; i++, ++A_data, ++B_data) {
     (*A_data) += (*B_data);
   }
 };
@@ -109,7 +109,7 @@ void dualres::apply_mask_impl(
 ) {
   ImageType * img_ptr = (ImageType*)img->data;
   MaskType * mask_ptr = (MaskType*)mask->data;
-  for (int i = 0; i < img->nvox; i++, ++img_ptr, ++mask_ptr) {
+  for (int i = 0; i < (int)img->nvox; i++, ++img_ptr, ++mask_ptr) {
     if ((*mask_ptr) == (MaskType)0  ||  isnan(*img_ptr)) {
       (*img_ptr) = (ImageType)0;
     }

@@ -35,10 +35,11 @@ void dualres::GPMCommandParser<T>::show_help() const {
 	    << "\t--nsave        int        MCMC samples to save in output\n"
 	    << "\t--omask    path/to/mask   mask image to define ouptut space\n"
 	    << "\t--output   file/basename  path prefix for output files\n"
+	    << "\t--samples                 flag to request full MCMC output\n"
 	    << "\t--smask    path/to/mask   mask image for --stdres input\n"
 	    << "\t--seed         int        RNG seed\n"
 	    << "\t--stdres   path/to/img2   \n"
-	    << "\t--theta                   alias for --covariance\n"
+	    << "\t--theta        f1 f2 f3   alias for --covariance\n"
 	    << "\t--thin         int        thinning factor for MCMC samples\n"
 	    << "\t--threads      int        number of parallel threads\n"
 	    << "\n"
@@ -76,12 +77,13 @@ dualres::GPMCommandParser<T>::GPMCommandParser(int argc, char* argv[]) {
   _mcmc_thin = 3;
   _mcmc_mhtarget = 0.65;
   _monitor = false;
+  _output_samples = false;
   _seed = static_cast<unsigned int>(
     std::chrono::duration_cast<std::chrono::milliseconds>(time).count());
   _seed = std::max(_seed, (unsigned)1);
   _threads = (unsigned)0;
 
-  ss << "dualres_mcmc_" << _seed << "_";
+  ss << "dualgpm_mcmc_" << _seed << "_";
   _output_base = ss.str();
 
 
@@ -286,6 +288,9 @@ dualres::GPMCommandParser<T>::GPMCommandParser(int argc, char* argv[]) {
 	  _status = call_status::error;
 	}
       }
+      else if (arg == "--samples") {
+	_output_samples = true;
+      }
       else if (arg == "--seed") {
 	if (i + 1 < argc) {
 	  i++;
@@ -415,6 +420,11 @@ bool dualres::GPMCommandParser<T>::help_invoked() const {
 template< typename T >
 bool dualres::GPMCommandParser<T>::monitor() const {
   return _monitor;
+};
+
+template< typename T >
+bool dualres::GPMCommandParser<T>::output_samples() const {
+  return _output_samples;
 };
   
 template< typename T >

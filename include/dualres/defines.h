@@ -65,6 +65,7 @@ namespace dualres {
 
 
     bool _MONITOR_ = false;
+    bool _OUTPUT_SAMPLES_ = false;
 
     const int _MAX_THREADS_ = std::thread::hardware_concurrency();
     int _N_THREADS_ = std::max(_MAX_THREADS_ * 4 / 5, 1);

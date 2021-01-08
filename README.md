@@ -39,6 +39,7 @@ $ ./dualres/build/bin/dualgpmf \
 	--highres /path/to/highres.nii \  # REQUIRED. Image defines inference space
 	--stdres /path/to/stdres.nii \    # Auxiliary data
 	--covariance 0.806 0.131966 1 \   # [partial sill, bandwidth, exponent]
+	--neighborhood 6.9 \              # Kriging approximation extent (mm)
 	--output output_basename \        # Output file base name
 	--hmask /path/to/hresmask.nii \   # Mask for highres image input
 	--omask /path/to/outmask.nii \    # Optional output image mask
@@ -48,19 +49,27 @@ $ ./dualres/build/bin/dualgpmf \
 	--thin 3 \                        # MCMC thinning factor
 	--leapfrog 25 \                   # HMC number of integrator steps
 	--mhtarget 0.65 \                 # HMC target acceptance rate
-	--neighborhood 6.9 \              # Kriging approximation extent (mm)
 	--threads 6 \                     # Number of cores to use
 	--seed 8675309                    # URNG seed
 ```
 
 
 #### Estimation of radial basis parameters
+The `dualgpmf` program will estimate the covariance parameters using a
+minimum contrast method if they are not specified by the user, but the
+user control over this feature is sparse. For an enhanced interface
+and control over the estimation we provide `estimate_rbf`, which
+exposes more user options. For example:
 ```
 $ ./dualres/build/bin/estimate_rbf \
 	/path/to/input.nii \              # REQUIRED. Input image/data
 	--mask /path/to/mask.nii \        # Mask for image input
-	--exponent 1.5 \                  # Fixes the RBF exponent
-	--xtol 1e-5                       # Set numerical tolerance
+	--xtol 1e-5 \                     # Set numerical tolerance
+	--bandwidth 1.0 \                 # } \
+	--exponent 1.5 \                  # }  - Fix given RBF parameters
+	--variance 1.0 \                  # } /
+	--constraint                      # } - Constrain bw <= expon
 ```
-
+Covariance parameters estimated using `estimate_rbf` can then be
+passed to `dualgpmf` using the `--covariance` flag as above.
 

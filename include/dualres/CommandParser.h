@@ -47,6 +47,7 @@ namespace dualres {
     bool error() const;
     bool help_invoked() const;
     bool monitor() const;
+    bool output_samples() const;
     operator bool() const;
     bool operator!() const;
     int mcmc_burnin() const;
@@ -73,6 +74,7 @@ namespace dualres {
     
   private:
     bool _monitor;
+    bool _output_samples;
     call_status _status;
     int _mcmc_burnin;
     int _mcmc_leapfrog_steps;
