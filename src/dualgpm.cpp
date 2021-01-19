@@ -116,6 +116,7 @@ int main(int argc, char *argv[]) {
 
   
   std::ofstream mcmc_samples_stream;
+  dualres::set_output_mcmc_samples(inputs.output_samples());
   if (dualres::output_samples()) {
     mcmc_samples_stream.open(_OUTPUT_FILE_SAMPLES.c_str());
   }

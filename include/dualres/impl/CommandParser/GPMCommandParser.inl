@@ -24,6 +24,8 @@ template< typename T >
 void dualres::GPMCommandParser<T>::show_help() const {
   show_usage();
   std::cerr << "Options:\n"
+	    << "\t--highres  path/to/img1   REQUIRED. Primary data file\n"
+	    << "\t--stdres   path/to/img2   Optional secondary data file\n"
 	    << "\t--burnin       int        number of MCMC burnin iterations\n"
 	    << "\t--covariance   f1 f2 f3   RBF covariance parameters\n"
 	    << "\t--debug                   run a short debug-length MCMC chain\n"
@@ -38,19 +40,34 @@ void dualres::GPMCommandParser<T>::show_help() const {
 	    << "\t--samples                 flag to request full MCMC output\n"
 	    << "\t--smask    path/to/mask   mask image for --stdres input\n"
 	    << "\t--seed         int        RNG seed\n"
-	    << "\t--stdres   path/to/img2   \n"
 	    << "\t--theta        f1 f2 f3   alias for --covariance\n"
 	    << "\t--thin         int        thinning factor for MCMC samples\n"
 	    << "\t--threads      int        number of parallel threads\n"
 	    << "\n"
-	    << "img[1-2] are valid NIfTI files and f[1-3] are parameters "
-	    << "of an exponential radial covariance function."
+	    << "----------------------------------------------------------------------\n"
+	    << "SHORTHAND \n"
+	    << "--------- \n"
+	    << "img[1-2] should be files in the NIfTI standard and f[1-3] \n"
+	    << "denote floating point parameters. \n"
 	    << "\n"
-	    << "[h,s,o]mask are valid NIfTI files used to define masks "
-	    << "for the high/base resolution image file, the "
-	    << "standard/secondary resolution image file, and an output "
-	    << "ROI, respectively. All will default to implicit image "
-	    << "masks if not specified."
+	    << "[h,s,o]mask are used to define masks for the high/base resolution \n"
+	    << "image file, the standard/secondary resolution image file, and an \n"
+	    << "output ROI, respectively. All will default to implicit image masks if \n"
+	    << "not specified. \n"
+	    << "\n"
+	    << "OTHER DETAILS \n"
+	    << "------------- \n"
+	    << "--threads \n"
+	    << "    Default value is 80% of the available threads on the current \n"
+	    << "    machine. Using more threads will typically result in a faster \n"
+	    << "    analysis. \n"
+	    << "\n"
+	    << "--seed \n"
+	    << "    Default value is set based on the system clock. The output of \n"
+	    << "    dualgpm[f] is deterministic given the random seed. \n"
+	    << "\n"
+	    << ""
+	    << "----------------------------------------------------------------------\n"
 	    << "\n\n";
 };
 
@@ -163,6 +180,7 @@ dualres::GPMCommandParser<T>::GPMCommandParser(int argc, char* argv[]) {
 	_mcmc_nsave = 10;
 	_mcmc_thin = 1;
 	_monitor = true;
+	_output_samples = true;
       }
       else if (arg == "--highres") {
 	if (i + 1 < argc) {  // make sure not at end of argv
