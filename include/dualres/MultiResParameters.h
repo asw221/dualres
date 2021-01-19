@@ -250,8 +250,8 @@ dualres::MultiResParameters<T>::MultiResParameters(
       _nonpositive_eigen_values.push_back(i);
   }
   std::cout << "Done!\n"
-	    << "\t<Maximal eigen value = "
-	    << _lambda[0] << ">"
+	    << "\t<Maximal eigenvalue = "
+	    << (_lambda[0] / (scalar_type)_lambda.size()) << ">"
 	    << std::endl;
     
 

@@ -87,18 +87,18 @@ int main(int argc, char *argv[]) {
     !inputs.stdres_file().empty();
   // const int _n_datasets = _STANDARD_RESOLUTION_AVAILABLE ? 2 : 1;
 
-  const std::string _OUTPUT_FILE_SAMPLES = inputs.output_file(
-    "_samples.dat");
   const std::string _OUTPUT_FILE_ACTIVATION = inputs.output_file(
     "_posterior_activation.nii");
   const std::string _OUTPUT_FILE_MEAN = inputs.output_file(
     "_posterior_mean.nii");
+  const std::string _OUTPUT_FILE_RESIDUAL = inputs.output_file(
+    "_residual.nii");
+  const std::string _OUTPUT_FILE_SAMPLES = inputs.output_file(
+    "_samples.dat");
   const std::string _OUTPUT_FILE_VARIANCE = inputs.output_file(
     "_posterior_variance.nii");
   // const std::string _OUTPUT_FILE_ACTIVATION = inputs.output_file(
   //   "_posterior_Pr(activation).nii");
-  const std::string _OUTPUT_FILE_RESIDUAL = inputs.output_file(
-    "_residual.nii");
   
   ::nifti_image* _high_res_;
   ::nifti_image* _std_res_;
@@ -119,12 +119,6 @@ int main(int argc, char *argv[]) {
   if (dualres::output_samples()) {
     mcmc_samples_stream.open(_OUTPUT_FILE_SAMPLES.c_str());
   }
-  if (_OUTPUT_FILE_MEAN != inputs.highres_file())
-    ::remove(_OUTPUT_FILE_MEAN.c_str());
-  if (_OUTPUT_FILE_VARIANCE != inputs.highres_file())
-    ::remove(_OUTPUT_FILE_VARIANCE.c_str());
-  if (_OUTPUT_FILE_ACTIVATION != inputs.highres_file())
-    ::remove(_OUTPUT_FILE_ACTIVATION.c_str());
   
 
   try {
@@ -294,15 +288,16 @@ int main(int argc, char *argv[]) {
 
     if (mcmc_samples_stream.is_open()) {
       mcmc_samples_stream.close();
+      
+      std::cout << ansi::foreground_cyan
+		<< _OUTPUT_FILE_SAMPLES << " written\n"
+		<< ansi::reset;
     }
-    std::cout << ansi::foreground_cyan
-	      << _OUTPUT_FILE_SAMPLES << " written\n"
-	      << ansi::reset;
 
     // --- Write output ----------------------------------------------
     // Posterior mean:
     ::nifti_set_filenames(_output_mask_, _OUTPUT_FILE_MEAN.c_str(), 1, 1);
-    if (std::string(_output_mask_->fname) != inputs.highres_file()) {
+    if (std::string(_OUTPUT_FILE_MEAN) != inputs.highres_file()) {
       dualres::emplace_nonzero_data(_output_mask_, model_output.mode_mu());
       
       ::nifti_image_write(_output_mask_);
@@ -317,63 +312,37 @@ int main(int argc, char *argv[]) {
     }
     
     // Posterior variance:
-    ::nifti_set_filenames(_output_mask_, _OUTPUT_FILE_VARIANCE.c_str(), 1, 1);
-    if (std::string(_output_mask_->fname) != inputs.highres_file()) {
-      dualres::emplace_nonzero_data(_output_mask_, model_output.var_mu());
-      
-      ::nifti_image_write(_output_mask_);
-      std::cout << ansi::foreground_cyan
-		<< _OUTPUT_FILE_VARIANCE << " written\n"
-		<< ansi::reset;
-    }
-    else {
-      error_stream << "Warning: posterior variance image would overwrite data. "
-		   << "File not written\n";
-      std::cerr << error_stream.str();
-    }
+    dualres::emplace_nonzero_data(_output_mask_, model_output.var_mu());
+    dualres::nifti_image_write(_output_mask_, _OUTPUT_FILE_VARIANCE);
+    std::cout << ansi::foreground_cyan
+	      << _OUTPUT_FILE_VARIANCE << " written\n"
+	      << ansi::reset;
 
     
     // Activation image:
     //   (Derived from loss/risk function)
-    ::nifti_set_filenames(_output_mask_, _OUTPUT_FILE_ACTIVATION.c_str(), 1, 1);
-    if (std::string(_output_mask_->fname) != inputs.highres_file()) {
-      dualres::emplace_nonzero_data(_output_mask_, model_output.activation() );
-      
-      ::nifti_image_write(_output_mask_);
-      std::cout << ansi::foreground_cyan
-		<< _OUTPUT_FILE_RESIDUAL << " written\n"
-		<< ansi::reset;
-    }
-    else {
-      error_stream << "Warning: posterior activation image would overwrite data. "
-		   << "File not written\n";
-      std::cerr << error_stream.str();
-    }
-
+    dualres::emplace_nonzero_data(_output_mask_, model_output.activation());
+    dualres::nifti_image_write(_output_mask_, _OUTPUT_FILE_ACTIVATION);
+    std::cout << ansi::foreground_cyan
+	      << _OUTPUT_FILE_RESIDUAL << " written\n"
+	      << ansi::reset;
 
     
     // Residual image:
-    ::nifti_set_filenames(_output_mask_, _OUTPUT_FILE_RESIDUAL.c_str(), 1, 1);
-    if (std::string(_output_mask_->fname) != inputs.highres_file()) {
-      dualres::emplace_nonzero_data(_output_mask_,
-        (-model_output.mode_mu()).eval() );
-      dualres::apply_mask(_high_res_, _output_mask_);
-      dualres::add_to(_output_mask_, _high_res_);
-      dualres::apply_mask(_output_mask_, _high_res_);
-      
-      ::nifti_image_write(_output_mask_);
-      std::cout << ansi::foreground_cyan
-		<< _OUTPUT_FILE_RESIDUAL << " written\n"
-		<< ansi::reset;
-    }
-    else {
-      error_stream << "Warning: posterior variance image would overwrite data. "
-		   << "File not written\n";
-      std::cerr << error_stream.str();
-    }
+    //  (Should come last)
+    dualres::emplace_nonzero_data(_output_mask_,
+      (-model_output.mode_mu()).eval() );
+    dualres::apply_mask(_high_res_, _output_mask_);
+    dualres::add_to(_output_mask_, _high_res_);
+    dualres::apply_mask(_output_mask_, _high_res_);
+    dualres::nifti_image_write(_output_mask_, _OUTPUT_FILE_RESIDUAL);
+    std::cout << ansi::foreground_cyan
+	      << _OUTPUT_FILE_RESIDUAL << " written\n"
+	      << ansi::reset;
 
     
-    std::cout << "Sampling took " << model_output.sampling_time() << " (sec)\n"
+    std::cout << "Post burnin sampling took "
+	      << model_output.sampling_time() << " (sec)\n"
 	      << "Metropolis-Hastings rate was "
 	      << (model_output.metropolis_hastings_rate() * 100)
 	      << "%\n" << std::endl;
@@ -410,7 +379,8 @@ int main(int argc, char *argv[]) {
   catch (...) {
     error_status = true;
     std::cerr << ansi::foreground_bold_magenta
-	      << "\nUnknown error\n" << ansi::reset;
+	      << "\nUnknown error\n"
+	      << ansi::reset << std::endl;
   }
 
 

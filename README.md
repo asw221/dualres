@@ -8,7 +8,11 @@
  - [NLopt](https://nlopt.readthedocs.io/en/latest/)
  - [OpenMP](https://www.openmp.org/)
  - [zlib](https://www.zlib.net/)
- 
+
+We also require a `C`/`C++` compiler compatable with the `C++17`
+standard and the `boost::filesystem` library (e.g. `gcc` >= `8.3.0`
+should suffice).
+
  
 #### Installation
 Using cmake with dependencies installed:
@@ -18,17 +22,6 @@ mkdir ../../build && cd ../../build
 cmake .. -DCMAKE_BUILD_TYPE=Release
 make
 ```
- 
-#### To-do
- - [x] RBF parameter estimation: add option for fixed covariance
-   parameters & toggle constraint
- - [ ] Convenient interface to check proportion of positive eigen values
-   for given kernel function/image space
- - [ ] Enhance comments and help pages
- - [x] Add options & utilities for masking images
- - [ ] Would eventually like to write wrapping classes for `nifti_image`
-   pointers and covariance parameters
-
 
 
 ### Analysis
@@ -72,4 +65,15 @@ $ ./dualres/build/bin/estimate_rbf \
 ```
 Covariance parameters estimated using `estimate_rbf` can then be
 passed to `dualgpmf` using the `--covariance` flag as above.
+
+ 
+#### To-do
+ - [x] RBF parameter estimation: add option for fixed covariance
+   parameters & toggle constraint
+ - [ ] Convenient interface to check proportion of positive eigen values
+   for given kernel function/image space
+ - [ ] Enhance comments and help pages
+ - [x] Add options & utilities for masking images
+ - [ ] Would eventually like to write wrapping classes for `nifti_image`
+   pointers and covariance parameters
 

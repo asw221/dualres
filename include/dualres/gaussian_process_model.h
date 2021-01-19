@@ -144,7 +144,7 @@ namespace dualres {
 	    posterior_summary.update(mu, sigma, log_lik);
 	    // _output_stream_ << mu.transpose() << " ";
 	    
-	    if (dualres::output_samples()) {
+	    if (_output_stream_.is_open() && dualres::output_samples()) {
 	      
 	      for (int i = 0; i < mu.size(); i++) {
 		_output_stream_ << mu.coeffRef(i) << "\t";

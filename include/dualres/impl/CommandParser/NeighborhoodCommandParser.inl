@@ -8,7 +8,8 @@
 template< typename T >
 void dualres::NeighborhoodCommandParser<T>::show_usage() const {
   std::cerr << "\nUsage:\n"
-	    << "\trbf_neighbhorood rho --covariance f1 f2 f3";
+	    << "\trbf_neighbhorood rho --covariance f1 f2 f3"
+	    << "\n\n";
 };
 
 
