@@ -334,7 +334,7 @@ int main(int argc, char *argv[]) {
     dualres::emplace_nonzero_data(_output_mask_, model_output.activation());
     dualres::nifti_image_write(_output_mask_, _OUTPUT_FILE_ACTIVATION);
     std::cout << ansi::foreground_cyan
-	      << _OUTPUT_FILE_RESIDUAL << " written\n"
+	      << _OUTPUT_FILE_ACTIVATION << " written\n"
 	      << ansi::reset;
 
     
