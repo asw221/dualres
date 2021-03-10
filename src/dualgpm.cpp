@@ -72,9 +72,9 @@ int main(int argc, char *argv[]) {
   const int FFTW_STATUS = ::fftw_init_threads();
 #endif
   if (FFTW_STATUS == 0) {
-    std::cerr
-      << "FFTW thread initialization had abnormal exit status"
-      << std::endl;
+    std::cerr << ansi::foreground_bold_magenta
+	      << "FFTW thread initialization had abnormal exit status"
+	      << std::endl;
     return 1;
   }
   std::cout << "[dualres running on " << dualres::threads()
@@ -88,15 +88,15 @@ int main(int argc, char *argv[]) {
   // const int _n_datasets = _STANDARD_RESOLUTION_AVAILABLE ? 2 : 1;
 
   const std::string _OUTPUT_FILE_ACTIVATION = inputs.output_file(
-    "_posterior_activation.nii");
+    "_posterior_activation.nii.gz");
   const std::string _OUTPUT_FILE_MEAN = inputs.output_file(
-    "_posterior_mean.nii");
+    "_posterior_mean.nii.gz");
   const std::string _OUTPUT_FILE_RESIDUAL = inputs.output_file(
-    "_residual.nii");
+    "_residual.nii.gz");
   const std::string _OUTPUT_FILE_SAMPLES = inputs.output_file(
     "_samples.dat");
   const std::string _OUTPUT_FILE_VARIANCE = inputs.output_file(
-    "_posterior_variance.nii");
+    "_posterior_variance.nii.gz");
   // const std::string _OUTPUT_FILE_ACTIVATION = inputs.output_file(
   //   "_posterior_Pr(activation).nii");
   
@@ -136,7 +136,9 @@ int main(int argc, char *argv[]) {
 		<< std::endl;
     }
     else {
-      std::cerr << "  ***WARNING***  "
+      std::cerr << ansi::foreground_bold_magenta
+		<< "  *** WARNING ***  "
+		<< ansi::reset
 	        << "High-resolution image/mask mismatch. "
 		<< "Image not masked"
 		<< std::endl;
@@ -144,7 +146,9 @@ int main(int argc, char *argv[]) {
     }
     if (!dualres::same_orientation(_high_res_, _output_mask_) ||
 	(_high_res_->nvox != _output_mask_->nvox)) {
-      std::cerr << "  ***WARNING***  "
+      std::cerr << ansi::foreground_bold_magenta
+		<< "  *** WARNING ***  "
+		<< ansi::reset
 	        << "High-resolution/output mask mismatch."
 		<< std::endl;
       throw std::domain_error("Improper mask");
@@ -185,7 +189,9 @@ int main(int argc, char *argv[]) {
 		    << std::endl;
 	}
 	else {
-	  std::cerr << "  ***WARNING***  "
+	  std::cerr << ansi::foreground_bold_magenta
+		    << "  *** WARNING ***  "
+		    << ansi::reset
 	            << "Standard-resolution image/mask mismatch. "
 	            << "Image not masked"
 		    << std::endl;
@@ -307,7 +313,10 @@ int main(int argc, char *argv[]) {
 		<< ansi::reset;
     }
     else {
-      error_stream << "Warning: posterior mean image would overwrite data. "
+      error_stream << ansi::foreground_bold_magenta
+		   << "  *** WARNING *** "
+		   << ansi::reset
+		   << "posterior mean image would overwrite data. "
 		   << "File not written\n";
       std::cerr << error_stream.str();
     }

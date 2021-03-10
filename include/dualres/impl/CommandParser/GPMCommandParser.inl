@@ -8,44 +8,65 @@
 #include <vector>
 
 
+#include "dualres/defines.h"
 #include "dualres/nifti_manipulation.h"
 
 
 
 template< typename T >
 void dualres::GPMCommandParser<T>::show_usage() const {
-  std::cerr << "Fit dual (or single) resolution Gaussian process model to NIfTI data:\n"
-	    << "Usage:\n"
-	    << "\tdualgpm --highres path/to/img1 <options>\n\n";
+  std::cerr << "\nFit dual (or single) resolution Gaussian process model to NIfTI data:\n"
+	    << "\nUsage:\n"
+	    << "\t" << _caller << " --highres path/to/img1 <options>\n\n";
 };
 
 
 template< typename T >
 void dualres::GPMCommandParser<T>::show_help() const {
+  std::string user_response;
   show_usage();
-  std::cerr << "Options:\n"
-	    << "\t--highres  path/to/img1   REQUIRED. Primary data file\n"
+  std::cerr << "REQUIRED:\n"
+	    << "\t--highres  path/to/img1   Primary data source\n"
+	    << "\n"
+	    << "Optional:\n"
 	    << "\t--stdres   path/to/img2   Optional secondary data file\n"
-	    << "\t--burnin       int        number of MCMC burnin iterations\n"
+	    << "\t--burnin       int        Number of MCMC burnin iterations\n"
 	    << "\t--covariance   f1 f2 f3   RBF covariance parameters\n"
-	    << "\t--debug                   run a short debug-length MCMC chain\n"
-	    << "\t--leapfrog     int        number of MCMC integrator steps\n"
-	    << "\t--mhtarget     float      target metropolis hastings rate\n"
-	    << "\t--monitor                 monitor MCMC iterations (debugging)\n"
-	    << "\t--hmask    path/to/mask   mask image for --highres input\n"
-	    << "\t--neighborhood float      n'hood size (mm) for kriging approx\n"
+	    << "\t--debug                   Run a short debug-length MCMC chain\n"
+	    << "\t--leapfrog     int        Number of MCMC integrator steps\n"
+	    << "\t--mhtarget     float      Target metropolis hastings rate\n"
+	    << "\t--monitor                 Monitor MCMC iterations (debugging)\n"
+	    << "\t--hmask    path/to/mask   Mask image for --highres input\n"
+	    << "\t--neighborhood float      N'hood size (mm) for kriging approx\n"
 	    << "\t--nsave        int        MCMC samples to save in output\n"
-	    << "\t--omask    path/to/mask   mask image to define ouptut space\n"
-	    << "\t--output   file/basename  path prefix for output files\n"
-	    << "\t--samples                 flag to request full MCMC output\n"
-	    << "\t--smask    path/to/mask   mask image for --stdres input\n"
+	    << "\t--omask    path/to/mask   Mask image to define output space\n"
+	    << "\t--output   file/basename  Path prefix for output files\n"
+	    << "\t--samples                 Request full MCMC output\n"
+	    << "\t--smask    path/to/mask   Mask image for --stdres input\n"
 	    << "\t--seed         int        RNG seed\n"
-	    << "\t--theta        f1 f2 f3   alias for --covariance\n"
-	    << "\t--thin         int        thinning factor for MCMC samples\n"
-	    << "\t--threads      int        number of parallel threads\n"
+	    << "\t--theta        f1 f2 f3   Alias for --covariance\n"
+	    << "\t--thin         int        Thinning factor for MCMC samples\n"
+	    << "\t--threads      int        Number of parallel threads\n"
 	    << "\n"
 	    << "----------------------------------------------------------------------\n"
-	    << "SHORTHAND \n"
+	    << "\n"
+	    << "All arguments have default values except for image inputs. \n"
+	    << "\n"
+	    << "Denoises the input --highres image, using additional --stdres data if \n"
+	    << "available. Minimum output will include:"
+	    << "\n"
+	    << "  - *_posterior_activation.nii.gz \n"
+	    << "    file mapping [0, 1] estimates of the posterior probability of \n"
+	    << "    functional (de)activation \n"
+	    << "\n"
+	    << "  - *_posterior_mean.nii.gz \n"
+	    << "    file containing the estimated denoised --highres image \n"
+	    << "\n"
+	    << "  - *_posterior_variance.nii.gz and *_residual.nii.gz \n"
+	    << "    files mapping the uncertainty in the posterior mean, and the \n"
+	    << "    estimated noise, respectively. \n"
+	    << "\n"
+	    << "Shorthand \n"
 	    << "--------- \n"
 	    << "img[1-2] should be files in the NIfTI standard and f[1-3] \n"
 	    << "denote floating point parameters. \n"
@@ -53,22 +74,117 @@ void dualres::GPMCommandParser<T>::show_help() const {
 	    << "[h,s,o]mask are used to define masks for the high/base resolution \n"
 	    << "image file, the standard/secondary resolution image file, and an \n"
 	    << "output ROI, respectively. All will default to implicit image masks if \n"
-	    << "not specified. \n"
+	    << "not specified. If you choose to use image masks, they must be in the \n"
+	    << "same orientation as their corresponding data image. This will be \n"
+	    << "checked by comparing the qform matrix in the image/mask header files. \n"
+	    << std::endl;
+
+  std::cerr << "<Press Enter/Return for more or {any}+Enter to terminate> ";
+  std::cin.clear();
+  std::getline( std::cin, user_response );
+  if ( user_response.empty() ) {
+    std::cerr << "\n";
+    show_details();
+ 
+    std::cerr << "<Press Enter/Return for more or {any}+Enter to terminate> ";
+    std::cin.clear();
+    std::getline( std::cin, user_response );
+    if ( user_response.empty() ) {
+      std::cerr << "\n";
+      show_mcmc_control();
+    }
+  }
+
+  
+  std::cerr << "----------------------------------------------------------------------\n"
 	    << "\n"
-	    << "OTHER DETAILS \n"
+	    << std::endl;
+};
+
+
+
+
+template< typename T >
+void dualres::GPMCommandParser<T>::show_details() const {
+  std::cerr << "\nOther Details \n"
 	    << "------------- \n"
-	    << "--threads \n"
-	    << "    Default value is 80% of the available threads on the current \n"
-	    << "    machine. Using more threads will typically result in a faster \n"
-	    << "    analysis. \n"
+	    << "--covariance \n"
+	    << "    Takes three floating point parameters as its argument \n"
+	    << "    corresponding to the parameters of the Gaussian process covariance \n"
+	    << "    function. We use a radial basis and the parameters correspond to \n"
+	    << "    the {partial sill variance; bandwidth; exponent}. dualgpm[f] will \n"
+	    << "    estimate these from the data if not provided, but for finer user \n"
+	    << "    control, please see our other program estimate_rbf. \n"
+	    << "\n"
+	    << "--neighborhood \n"
+	    << "    Default value is 3x the largest --highres voxel dimension. Our \n"
+	    << "    algorithm uses a local kriging approximation for the --stdres \n"
+	    << "    image, if present. The --neighborhood argument (in mm) controls \n"
+	    << "    the radius of that local approximation. \n"
+	    << "\n"
+	    << "--omask \n"
+	    << "    Must match the orientation of the --highres image. For special use \n"
+	    << "    cases (e.g. signal loss), if the desired output region is \n"
+	    << "    different from the implicit --highres or --hmask image mask, the \n"
+	    << "    user can specify the desired output region with this flag and its \n"
+	    << "    argument. \n"
+	    << "\n"
+	    << "--output \n"
+	    << "    Include this flag with its argument to direct dualgpm[f] where to \n"
+	    << "    write its output. The output basename will be appended with, e.g. \n"
+	    << "    *_posterior_mean.nii.gz identifiers. \n"
 	    << "\n"
 	    << "--seed \n"
 	    << "    Default value is set based on the system clock. The output of \n"
 	    << "    dualgpm[f] is deterministic given the random seed. \n"
 	    << "\n"
-	    << ""
-	    << "----------------------------------------------------------------------\n"
-	    << "\n\n";
+	    << "--threads \n"
+	    << "    Default value is 80% of the available threads on the current \n"
+	    << "    machine. Using more threads will typically result in a faster \n"
+	    << "    analysis. \n"
+	    << std::endl;
+};
+
+
+
+template< typename T >
+void dualres::GPMCommandParser<T>::show_mcmc_control() const {
+  std::cerr << "\nMCMC Control \n"
+	    << "------------ \n"
+	    << "--burnin \n"
+	    << "    Set to 1000 by default. The number of iterations to discard from \n"
+	    << "    the beginning of the Hamiltonian Monte Carlo (HMC) chain. \n"
+	    << "\n"
+	    << "--leapfrog \n"
+	    << "    Set to 25 by default. The number of numerical integration steps \n"
+	    << "    per HMC iteration. \n"
+	    << "\n"
+	    << "--mhtarget \n"
+	    << "    Set to 0.65 by default. Rate at which the algorithm accepts HMC \n"
+	    << "    proposals. Given the --mhtarget and --leapfrog, dualgpm[f] \n"
+	    << "    automatically tunes the HMC 'path length' to achieve the desired \n"
+	    << "    target acceptance rate. \n"
+	    << "\n"
+	    << "--monitor \n"
+	    << "    Directs dualgpm[f] to print extra verbose information about the \n"
+	    << "    HMC chain while it is running. Useful for debugging. \n"
+	    << "\n"
+	    << "--nsave \n"
+	    << "    Set to 1000 by default. The total number of HMC samples is \n"
+	    << "    [--burnin] + [--thin] * [--nsave]. Posterior quantities of \n"
+	    << "    interest are computed over --nsave samples."
+	    << "\n"
+	    << "--samples \n"
+	    << "    Include this flag in your call to dualgpm[f] to request full MCMC \n"
+	    << "    output including samples of the mean parameter from each voxel in \n"
+	    << "    the --highres image. Files will be written in plain, tab delimited \n"
+	    << "    format and can be large. \n"
+	    << "\n"
+	    << "--thin \n"
+	    << "    Set to 3 by default. The post-burnin HMC sample thinning rate. \n"
+	    << "    Per the default, posterior quantities of ininterest are computed \n"
+	    << "    using every 3rd post-burnin sample. \n"
+	    << std::endl;;
 };
 
 
@@ -82,6 +198,7 @@ dualres::GPMCommandParser<T>::GPMCommandParser(int argc, char* argv[]) {
 
   std::stringstream ss;
   _status = call_status::success;
+  _caller = dualres::path( argv[0] ).stem().string();
 
   const int K = 3;  // number of covariance parameters
   const auto time = std::chrono::high_resolution_clock::now().time_since_epoch();

@@ -340,6 +340,7 @@ Eigen::MatrixXi dualres::get_nonzero_indices_impl(
   }
   Eigen::MatrixXi ijk(indices.size(), 3);
   for (int i = 0; i < (int)indices.size(); i++) {
+    // Column-major order
     ijk(i, 0) = indices[i] % nx;  
     ijk(i, 1) = (indices[i] / nx) % ny;
     ijk(i, 2) = (indices[i] / (nx * ny)) % nz;

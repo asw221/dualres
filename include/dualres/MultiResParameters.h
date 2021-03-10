@@ -255,13 +255,19 @@ dualres::MultiResParameters<T>::MultiResParameters(
 	    << std::endl;
     
 
-  std::cout << (_lambda.size() - _nonpositive_eigen_values.size())
-	    << "/" << (_lambda.size())
-	    << " eigen values have real-part > 0  ("
-	    << std::setprecision(2) << std::fixed
+  std::cout << std::setprecision(2) << std::fixed
 	    << ( (1.0 - (double)_nonpositive_eigen_values.size() / _lambda.size())
-		 * 100 ) << "%)"
+		 * 100 )
+	    << "% of eigen values have real-part > 0  ("
+	    << (_lambda.size() - _nonpositive_eigen_values.size())
+	    << "/"
+	    << (_lambda.size())
+	    << ")"
 	    << std::endl;
+
+  if ( !_nonpositive_eigen_values.empty() )
+    std::cout << "\t<Covariance function is numerically not positive definite>"
+	      << std::endl;
   
   if ((int)_nonpositive_eigen_values.size() >= _lambda.size() / 2)
     throw std::domain_error("Too many negative eigen values");
