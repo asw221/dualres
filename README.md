@@ -2,17 +2,25 @@
 # Dual-resolution fMRI
 
 #### Dependencies
- - [boost](https://www.boost.org/)
- - [Eigen3](http://eigen.tuxfamily.org/index.php?title=Main_Page)
- - [FFTW3](http://www.fftw.org/)
- - [NLopt](https://nlopt.readthedocs.io/en/latest/)
- - [OpenMP](https://www.openmp.org/)
- - [zlib](https://www.zlib.net/) - (This one will likely already be on
+ - [boost]
+ (https://www.boost.org/)
+ - [Eigen3]
+ (http://eigen.tuxfamily.org/index.php?title=Main_Page)
+ - [FFTW3]
+ (http://www.fftw.org/)
+ - [NLopt]
+ (https://nlopt.readthedocs.io/en/latest/)
+ - [OpenMP]
+ (https://www.openmp.org/)
+ - [zlib]
+ (https://www.zlib.net/) - (This one will likely already be on
    your system)
 
 We also require a `C`/`C++` compiler compatable with the `C++17`
 standard and the `boost::filesystem` library (e.g. `gcc` >= `8.3.0`
-should suffice).
+should suffice). See section 
+[Installing Dependencies](#installing-dependencies)
+below.
 
  
 #### Installation
@@ -32,7 +40,7 @@ Dual- or single-resolution models can be fit to data stored using the
 $ ./dualres/build/bin/dualgpmf \
 	--highres /path/to/highres.nii \  # REQUIRED. Image defines inference space
 	--stdres /path/to/stdres.nii \    # Auxiliary data
-	--covariance 0.806 0.131966 1 \   # [partial sill, bandwidth, exponent]
+	--covariance 0.806 0.131966 1 \   # [marg. variance, bandwidth, exponent]
 	--neighborhood 6.9 \              # Kriging approximation extent (mm)
 	--output output_basename \        # Output file base name
 	--hmask /path/to/hresmask.nii \   # Mask for highres image input
@@ -66,6 +74,23 @@ $ ./dualres/build/bin/estimate_rbf \
 ```
 Covariance parameters estimated using `estimate_rbf` can then be
 passed to `dualgpmf` using the `--covariance` flag as above.
+
+
+
+
+#### Installing Dependencies
+
+##### On Ubuntu
+(Tested on v20.04)
+
+```
+$ sudo apt update
+$ sudo apt install libnlopt-cxx-dev
+$ sudo apt install libfftw3-dev
+$ sudo apt install libboost-all-dev
+$ sudo apt install libeigen3-dev
+```
+
 
  
 #### To-do
