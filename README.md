@@ -2,18 +2,12 @@
 # Dual-resolution fMRI
 
 #### Dependencies
- - [boost]
- (https://www.boost.org/)
- - [Eigen3]
- (http://eigen.tuxfamily.org/index.php?title=Main_Page)
- - [FFTW3]
- (http://www.fftw.org/)
- - [NLopt]
- (https://nlopt.readthedocs.io/en/latest/)
- - [OpenMP]
- (https://www.openmp.org/)
- - [zlib]
- (https://www.zlib.net/) - (This one will likely already be on
+ - [boost](https://www.boost.org/)
+ - [Eigen3](http://eigen.tuxfamily.org/index.php?title=Main_Page)
+ - [FFTW3](http://www.fftw.org/)
+ - [NLopt](https://nlopt.readthedocs.io/en/latest/)
+ - [OpenMP](https://www.openmp.org/)
+ - [zlib](https://www.zlib.net/) - (This one will likely already be on
    your system)
 
 We also require a `C`/`C++` compiler compatable with the `C++17`
