@@ -1,5 +1,8 @@
 # Find NLOPT
 #
+# Usage:
+#   find_package(NLOPT)
+#
 # This sets the following variables:
 #   NLOPT_FOUND
 #   NLOPT_INCLUDE_DIRS
@@ -9,6 +12,7 @@
 #
 # Defines the following targets:
 #   NLOPT::nlopt
+#
 
 
 if( NOT NLOPT_ROOT AND DEFINED ENV{NLOPTDIR} )

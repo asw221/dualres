@@ -75,14 +75,14 @@ passed to `dualgpmf` using the `--covariance` flag as above.
 #### Installing Dependencies
 
 ##### On Ubuntu
-(Tested on v20.04)
 
 ```
-$ sudo apt update
-$ sudo apt install libnlopt-cxx-dev
-$ sudo apt install libfftw3-dev
-$ sudo apt install libboost-all-dev
-$ sudo apt install libeigen3-dev
+# (Tested on Ubuntu 20.04)
+sudo apt update
+sudo apt install libnlopt-cxx-dev
+sudo apt install libfftw3-dev
+sudo apt install libboost-all-dev
+sudo apt install libeigen3-dev
 ```
 
 

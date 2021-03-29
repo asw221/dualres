@@ -11,6 +11,12 @@ if (NOT TARGET OpenMP::OpenMP_CXX)
   message(FATAL_ERROR "OpenMP_CXX target not found")
 endif()
 
+if (NOT TARGET FFTW::FloatOpenMP)
+  message(FATAL_ERROR "FFTW float/omp target not found")
+endif()
+if (NOT TARGET FFTW::DoubleOpenMP)
+  message(FATAL_ERROR "FFTW double/omp target not found")
+endif()
 
 
 # Anything that uses a CommandParser object must link to
