@@ -4,6 +4,8 @@
 #include <string>
 #include <vector>
 
+#include "dualres/defines.h"
+
 
 #ifndef _DUALRES_COMMAND_PARSER_
 #define _DUALRES_COMMAND_PARSER_
@@ -50,6 +52,7 @@ namespace dualres {
     bool output_samples() const;
     operator bool() const;
     bool operator!() const;
+    dualres::cov_code covfun() const;
     int mcmc_burnin() const;
     int mcmc_leapfrog_steps() const;
     int mcmc_nsave() const;
@@ -76,6 +79,7 @@ namespace dualres {
     bool _monitor;
     bool _output_samples;
     call_status _status;
+    dualres::cov_code _cov;
     int _mcmc_burnin;
     int _mcmc_leapfrog_steps;
     int _mcmc_nsave;

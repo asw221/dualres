@@ -175,5 +175,12 @@ int main(int argc, char *argv[]) {
 	    << " (mm)>\n"
     // << "Approximate Covariance:\n" << _Cov_approx << "\n"
 	    << std::endl;
+
+  std::cout << "You can pass these parameters to dualgpm[f] "
+	    << "with the option:\n\t--covariance "
+	    << theta[0] << " "
+	    << theta[1] << " "
+	    << theta[2] << "\n"
+	    << std::endl;
   
 };

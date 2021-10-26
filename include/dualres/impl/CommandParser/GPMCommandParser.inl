@@ -79,21 +79,23 @@ void dualres::GPMCommandParser<T>::show_help() const {
 	    << "checked by comparing the qform matrix in the image/mask header files. \n"
 	    << std::endl;
 
-  std::cerr << "<Press Enter/Return for more or {any}+Enter to terminate> ";
-  std::cin.clear();
-  std::getline( std::cin, user_response );
-  if ( user_response.empty() ) {
-    std::cerr << "\n";
-    show_details();
- 
-    std::cerr << "<Press Enter/Return for more or {any}+Enter to terminate> ";
-    std::cin.clear();
-    std::getline( std::cin, user_response );
-    if ( user_response.empty() ) {
-      std::cerr << "\n";
-      show_mcmc_control();
-    }
-  }
+  show_details();
+  show_mcmc_control();
+  // std::cerr << "<Press Enter/Return for more or {any}+Enter to terminate> ";
+  // std::cin.clear();
+  // std::getline( std::cin, user_response );
+  // if ( user_response.empty() ) {
+  //   std::cerr << "\n";
+  //   show_details();
+  //
+  //   std::cerr << "<Press Enter/Return for more or {any}+Enter to terminate> ";
+  //   std::cin.clear();
+  //   std::getline( std::cin, user_response );
+  //   if ( user_response.empty() ) {
+  //     std::cerr << "\n";
+  //     show_mcmc_control();
+  //   }
+  // }
 
   
   std::cerr << "----------------------------------------------------------------------\n"
@@ -206,6 +208,7 @@ dualres::GPMCommandParser<T>::GPMCommandParser(int argc, char* argv[]) {
   const auto time = std::chrono::high_resolution_clock::now().time_since_epoch();
 
   // Default values --------------------------------------------------
+  _cov = dualres::cov_code::rbf;
   _neighborhood = -1;
   _mcmc_burnin = 1000;
   _mcmc_leapfrog_steps = 25;
@@ -425,6 +428,9 @@ dualres::GPMCommandParser<T>::GPMCommandParser(int argc, char* argv[]) {
 	  _status = call_status::error;
 	}
       }
+      else if ( arg == "--rational-quadratic" ) {
+	_cov = dualres::cov_code::rq;
+      }
       else if (arg == "--samples") {
 	_output_samples = true;
       }
@@ -572,6 +578,12 @@ dualres::GPMCommandParser<T>::operator bool() const {
 template< typename T >
 bool dualres::GPMCommandParser<T>::operator!() const {
   return error();
+};
+
+
+template< typename T >
+dualres::cov_code dualres::GPMCommandParser<T>::covfun() const {
+  return _cov;
 };
 
 

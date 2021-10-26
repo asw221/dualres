@@ -38,6 +38,14 @@ namespace dualres {
     T rbf_fwhm_to_bandwidth(const T &fwhm, const T &exponent = 1.9999);
 
 
+    template< typename T >
+    T rational_quadratic(
+      const T val,
+      const T psi,
+      const T nu = 1,
+      const T variance = 1
+    );
+
     /*! @} */
   }  // namespace kernels 
   

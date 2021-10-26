@@ -26,6 +26,9 @@ namespace dualres {
    */
   enum class use_lambda_method { PROFILE, NATIVE, EXTENDED };
 
+  /*! Covariance function IDs */
+  enum class cov_code { rbf, rq };
+
 
   /*!
    * See official NIfTI datatype 

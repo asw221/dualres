@@ -55,6 +55,28 @@ T dualres::kernels::rbf_fwhm_to_bandwidth(
 
 
 
+template< typename T >
+T dualres::kernels::rational_quadratic(
+  const T val,
+  const T psi,
+  const T nu,
+  const T variance
+) {
+  // #ifndef DNDEBUG
+  if ( psi <= T(0) )
+    throw std::domain_error("rational_quadratic: psi <= 0");
+  if ( nu <= T(0) )
+    throw std::domain_error("rational_quadratic: nu <= 0");
+  if ( variance <= T(0) )
+    throw std::domain_error("rational_quadratic: variance <= 0");
+  // #endif
+    return variance * std::pow(1 + psi / nu * val * val, -nu);
+};
+
+
+
+
+
 
 
 

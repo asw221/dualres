@@ -56,6 +56,13 @@ int main(int argc, char *argv[]) {
 	      << _nii->dx << ", " << _nii->dy << ", " << _nii->dz
 	      << ")\n";
 
+    // Temporary
+    std::cout << "\n---------------\n\n"
+	      << "cal_min: " << _nii->cal_min << "\n"
+	      << "cal_max: " << _nii->cal_max << "\n"
+	      << "\n";
+    //
+
     if (print_qform) {
       std::cout << "\n"
 		<< ansi::foreground_bold

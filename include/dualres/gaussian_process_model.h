@@ -91,7 +91,8 @@ namespace dualres {
 	const ::nifti_image* const _output_mask_,
         dualres::MultiResData<T> &_data_,
 	dualres::HMCParameters<T> &_hmc_,
-	OStream &_output_stream_
+	OStream &_output_stream_,
+	const dualres::cov_code _covfun_ = dualres::cov_code::rbf
       ) {
 	typedef typename Eigen::Matrix<T, Eigen::Dynamic, 1> VectorType;
 
@@ -107,6 +108,7 @@ namespace dualres {
           _data_.n_datasets(), _data_.covariance_parameters(),
 	  dualres::get_nonzero_indices_bounded_by_box(_high_res_, input_bbox),
 	  dualres::qform_matrix(_high_res_),
+	  _covfun_,
 	  dualres::use_lambda_method::EXTENDED
         );
 	_theta_.add_data_to_mu(_data_);

@@ -291,7 +291,7 @@ int main(int argc, char *argv[]) {
     dualres::gaussian_process::gpp_approx::mcmc_summary<scalar_type>
       model_output = dualres::gaussian_process::gpp_approx::fit_model
       <scalar_type>(_high_res_, _high_res_mask_, _output_mask_,
-		    _data_, _hmc_, mcmc_samples_stream);
+		    _data_, _hmc_, mcmc_samples_stream, inputs.covfun());
 
     if (mcmc_samples_stream.is_open()) {
       mcmc_samples_stream.close();

@@ -47,6 +47,7 @@ namespace dualres {
       const typename std::vector<scalar_type> &covariance_parameters,
       const Eigen::MatrixXi &ijk_yh,
       const dualres::qform_type &Qform_yh,
+      const dualres::cov_code covfun = dualres::cov_code::rbf,
       const dualres::use_lambda_method select =
         dualres::use_lambda_method::EXTENDED
     );
@@ -175,6 +176,7 @@ dualres::MultiResParameters<T>::MultiResParameters(
     typename dualres::MultiResParameters<T>::scalar_type> &covariance_parameters,
   const Eigen::MatrixXi &ijk_yh,
   const dualres::qform_type &Qform_yh,
+  const dualres::cov_code covfun,
   const dualres::use_lambda_method lambda_method
 ) {
   _n_datasets = n_datasets;
@@ -234,13 +236,24 @@ dualres::MultiResParameters<T>::MultiResParameters(
     __image_grid_dims, Qform_yh,
     compute_lambda_on_extended_grid).template cast<complex_type>();
   for (int i = 0; i < _lambda.size(); i++) {
-    _lambda[i] = complex_type(dualres::kernels::rbf(
-        _lambda[i].real(), covariance_parameters[1],
-        covariance_parameters[2], covariance_parameters[0]),
-      0);
+    if ( covfun == dualres::cov_code::rbf ) {
+      _lambda[i] = complex_type(dualres::kernels::rbf(
+          _lambda[i].real(), covariance_parameters[1],
+	  covariance_parameters[2], covariance_parameters[0]),
+        0);
+    }
+    else if ( covfun == dualres::cov_code::rq ) {
+      _lambda[i] = complex_type(dualres::kernels::rational_quadratic(
+          _lambda[i].real(), covariance_parameters[1],
+	  covariance_parameters[2], covariance_parameters[0]),
+        0);
+    }
+    else {
+      throw std::domain_error("Unknown covfun");
+    }
   }
-  // __dft.forward(_lambda.data());
-  __dft.inverse(_lambda.data());
+  __dft.forward(_lambda.data());
+  // __dft.inverse(_lambda.data());
   //
   _tau_sq_inv = 1 / covariance_parameters[0];
 
@@ -335,10 +348,10 @@ dualres::MultiResParameters<T>::_compute_gradient(
      throw std::logic_error("Insufficient data for parameters");
 #endif
   // __temp_product.setZero();
-  __dft.forward(mu_star.data(), __temp_product.data());
+  __dft.inverse(mu_star.data(), __temp_product.data());
   __temp_product /= -(scalar_type)_lambda.size() * _lambda;
   _low_rank_adjust(__temp_product);
-  __dft.inverse(__temp_product.data());
+  __dft.forward(__temp_product.data());
   
   _real_mu = dualres::nullary_index(mu_star.matrix().real(),
 				    __lambda_grid_indices);
@@ -355,7 +368,7 @@ dualres::MultiResParameters<T>::_compute_gradient(
     throw std::logic_error(
       "Gradient only implemented for single or dual resolution");
   }
-  // Parallel
+  // 
 #pragma omp parallel for shared(__temp_product, __lambda_grid_indices, _real_sub_grad)
   for (int i = 0; i < __lambda_grid_indices.size(); i++) {
     __temp_product.coeffRef(__lambda_grid_indices.coeffRef(i)) +=
@@ -420,7 +433,7 @@ double dualres::MultiResParameters<T>::_log_prior(
 ) {
   std::complex<double> __lp(0, 0);
   // __temp_product.setZero();
-  __dft.forward(mu_star.data(), __temp_product.data());
+  __dft.inverse(mu_star.data(), __temp_product.data());
 
 #ifdef DUALRES_SINGLE_PRECISION
   std::complex<double> __A, __B, __correct(0, 0);
@@ -542,7 +555,7 @@ double dualres::MultiResParameters<T>::_potential_energy() {
   const complex_type _czero(0, 0);
   std::complex<double> __pe(0, 0);
   // __temp_product.setZero();
-  __dft.forward(_momentum.data(), __temp_product.data());
+  __dft.inverse(_momentum.data(), __temp_product.data());
   
 #ifdef DUALRES_SINGLE_PRECISION
   // SINGLE precision
@@ -679,11 +692,11 @@ double dualres::MultiResParameters<T>::update(
   _momentum += k * eps * _compute_gradient(data, _mu);
   for (int step = 0; step < L; step++) {
     k = (step == (L - 1)) ? 0.5 : 1;
-    __dft.forward(_momentum.data(), __temp_product.data());
+    __dft.inverse(_momentum.data(), __temp_product.data());
     __temp_product /= _lambda_mass * ((scalar_type)_lambda_mass.size() / eps);
     _low_rank_adjust(__temp_product);
     // _lambda_mass is already low-rank adjusted
-    __dft.inverse(__temp_product.data());
+    __dft.forward(__temp_product.data());
     _mu_star += __temp_product;
     _momentum += k * eps * _compute_gradient(data, _mu_star);
   }
@@ -797,10 +810,10 @@ void dualres::MultiResParameters<T>::_sample_momentum() {
     // imaginary part will always be 0
   _initial_energy *= -0.5;
   
-  __dft.forward(_momentum.data());
+  __dft.inverse(_momentum.data());
   _momentum *= _lambda_mass.sqrt() / (scalar_type)_momentum.size();
   _low_rank_adjust(_momentum);
-  __dft.inverse(_momentum.data());
+  __dft.forward(_momentum.data());
 };
 
 
