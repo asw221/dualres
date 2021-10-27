@@ -231,26 +231,24 @@ dualres::MultiResParameters<T>::MultiResParameters(
 
   // Now compute _lambda
   // _lambda itself is never low-rank adjusted
+  scalar_type (*cov)(scalar_type, scalar_type, scalar_type, scalar_type);
+  if ( covfun == dualres::cov_code::rbf ) {
+    cov = &dualres::kernels::rbf<scalar_type>;
+  }
+  else if ( covfun == dualres::cov_code::rq ) {
+    cov = &dualres::kernels::rational_quadratic<scalar_type>;
+  }
+  else {
+    throw std::domain_error("Unknown covariance function");
+  }
   std::cout << "Computing eigen values... " << std::flush;
   _lambda = dualres::circulant_base_3d<scalar_type>(
     __image_grid_dims, Qform_yh,
     compute_lambda_on_extended_grid).template cast<complex_type>();
   for (int i = 0; i < _lambda.size(); i++) {
-    if ( covfun == dualres::cov_code::rbf ) {
-      _lambda[i] = complex_type(dualres::kernels::rbf(
-          _lambda[i].real(), covariance_parameters[1],
-	  covariance_parameters[2], covariance_parameters[0]),
-        0);
-    }
-    else if ( covfun == dualres::cov_code::rq ) {
-      _lambda[i] = complex_type(dualres::kernels::rational_quadratic(
-          _lambda[i].real(), covariance_parameters[1],
-	  covariance_parameters[2], covariance_parameters[0]),
-        0);
-    }
-    else {
-      throw std::domain_error("Unknown covfun");
-    }
+    _lambda[i] = complex_type(
+      cov(_lambda[i].real(), covariance_parameters[1],
+	  covariance_parameters[2], covariance_parameters[0]), 0 );
   }
   __dft.forward(_lambda.data());
   // __dft.inverse(_lambda.data());
