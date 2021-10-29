@@ -207,7 +207,8 @@ namespace dualres {
   
   /// @cond IMPL
 
-  template< typename ImageType = float >
+  template< typename ImageType = float,
+	    typename OtherImageType = float >
   void add_to_impl(
     ::nifti_image* const A,
     const ::nifti_image* const B

@@ -33,9 +33,17 @@ void dualres::add_to(
       dualres::is_float(second_img)) {
     dualres::add_to_impl<>(first_img, second_img);
   }
+  else if (dualres::is_float(first_img) &&
+	   dualres::is_double(second_img)) {
+    dualres::add_to_impl<float, double>(first_img, second_img);
+  }
+  else if (dualres::is_double(first_img) &&
+	   dualres::is_float(second_img)) {
+    dualres::add_to_impl<double, float>(first_img, second_img);
+  }
   else if (dualres::is_double(first_img) &&
 	   dualres::is_double(second_img)) {
-    dualres::add_to_impl<double>(first_img, second_img);
+    dualres::add_to_impl<double, double>(first_img, second_img);
   }
   else {
     throw std::domain_error("Image math not implemented: datatype");
@@ -44,16 +52,16 @@ void dualres::add_to(
 
 
 
-template< typename ImageType >
+template< typename ImageType, typename OtherImageType >
 void dualres::add_to_impl(
   ::nifti_image* const A,
   const ::nifti_image* const B
 ) {
   // A <- A + B
   ImageType* A_data = (ImageType*)A->data;
-  ImageType* B_data = (ImageType*)B->data;
+  OtherImageType* B_data = (OtherImageType*)B->data;
   for (int i = 0; i < (int)A->nvox; i++, ++A_data, ++B_data) {
-    (*A_data) += (*B_data);
+    (*A_data) += static_cast<ImageType>( *B_data );
   }
 };
 
