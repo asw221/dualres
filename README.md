@@ -94,6 +94,4 @@ sudo apt install libeigen3-dev
  - [x] Add options & utilities for masking images
  - [ ] Convenient interface to check proportion of positive eigen values
    for given kernel function/image space
- - [ ] Would eventually like to write wrapping classes for `nifti_image`
-   pointers and covariance parameters
 
